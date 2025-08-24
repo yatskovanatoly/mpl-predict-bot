@@ -15,6 +15,7 @@ import { sanitizeScore } from '../helpers/parse-score.js'
 import { getLeaderboard, getPredictionsByUser } from '../supabase-client.js'
 import type { Game } from '../types.js'
 import { saveUserPrediction } from './save-prediction.js'
+import { BASE_URL } from '../urls.js'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
@@ -99,9 +100,17 @@ bot.on('callback_query:data', async (ctx) => {
 
 		ctx.session.game = game
 
-		await ctx.reply(
-			`${ctx.t('match')} ${game?.home.team} - ${game?.away.team}?`
-		)
+		await ctx.replyWithMediaGroup([
+			{
+				type: 'photo',
+				media: `${BASE_URL}/${game?.home.logo!}`,
+				caption: `${ctx.t('match')} ${game?.home.team} - ${game?.away.team}?`,
+			},
+			{
+				type: 'photo',
+				media: `${BASE_URL}/${game?.away.logo!}`,
+			},
+		])
 	}
 
 	if (data === 'leaderboard') {
