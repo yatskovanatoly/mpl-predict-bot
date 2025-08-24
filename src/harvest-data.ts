@@ -28,7 +28,7 @@ const getData = async (round?: number): Promise<RoundData> => {
 	try {
 		$('.result').each((i, el) => {
 			const row = $(el).find('.row').children()
-			const id = $(el).parent().attr('id')!
+			const id = Number($(el).parent().attr('id')!.replace('game_', ''))
 			const time = $(el).parent().find('.date').text().trim()
 
 			const game: Partial<Game> = {

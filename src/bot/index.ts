@@ -1,24 +1,26 @@
+import { I18n, type I18nFlavor } from '@grammyjs/i18n'
+import { PostgrestError } from '@supabase/supabase-js'
 import {
 	Bot,
 	Context,
-	GrammyError,
 	InlineKeyboard,
 	MemorySessionStorage,
 	session,
 	type SessionFlavor,
 } from 'grammy'
 import getData from '../harvest-data.js'
-import { sanitizeScore } from '../parse-score.js'
-import { getLeaderboard } from '../supabase-client.js'
+import { sanitizeScore } from '../helpers/parse-score.js'
+import { getLeaderboard, getPredictionsByUser } from '../supabase-client.js'
 import type { Game } from '../types.js'
 import { saveUserPrediction } from './save-prediction.js'
-import { I18n, type I18nFlavor } from '@grammyjs/i18n'
-import { PostgrestError } from '@supabase/supabase-js'
+import { parseGameId } from '../helpers/parse-game-id.js'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
 const bot = new Bot<MyContext>(token)
 const games = await getData()
+
+const round = 1
 
 const i18n = new I18n<MyContext>({
 	defaultLocale: 'ru',
@@ -43,9 +45,14 @@ bot.command('start', (ctx) => {
 })
 
 bot.callbackQuery('predict', async (ctx) => {
+	const usersPredictions = await getPredictionsByUser(ctx.from.id)
 	const roundMenu = new InlineKeyboard()
+
 	games.games.forEach(({ id, home, away }) => {
-		roundMenu.text(`${home.team} — ${away.team}`, `${id}`)
+		const hasPrediction = usersPredictions.some((p) => p.game_id === id)
+
+		if (hasPrediction) return null
+		roundMenu.text(`${home.team} — ${away.team}`, `game_${id}`)
 		roundMenu.row()
 	})
 	await ctx.answerCallbackQuery()
@@ -59,7 +66,7 @@ bot.on('callback_query:data', async (ctx) => {
 	if (data.startsWith('game_')) {
 		await ctx.answerCallbackQuery()
 
-		const game = games.games.find((game) => game.id === data)
+		const game = games.games.find((game) => game.id === parseGameId(data))
 
 		ctx.session.game = game
 
@@ -99,9 +106,17 @@ bot.on('message:text', async (ctx) => {
 		const [homeGoals, awayGoals] = score.split('-')
 		const { home, away, id } = ctx.session.game
 		try {
-			await saveUserPrediction(id, ctx.from, home.team!, away.team!, score)
+			await saveUserPrediction(
+				id,
+				ctx.from,
+				home.team!,
+				away.team!,
+				score,
+				round
+			)
 			await ctx.reply(
 				ctx.t('prediction_made', {
+					n: '\n\n',
 					home: home.team,
 					away: away.team,
 					homeGoals: homeGoals!,

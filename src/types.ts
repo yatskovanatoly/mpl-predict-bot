@@ -17,11 +17,12 @@ export type Team = {
 }
 
 export type Game = {
-  id: string
+  id: number
 	home: Team
 	away: Team
 	score: string
 	time?: string | undefined
+  game_id: number
 }
 
 export type Rounds = {

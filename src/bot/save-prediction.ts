@@ -2,11 +2,12 @@ import type { User } from 'grammy/types'
 import { createPrediction } from '../supabase-client.js'
 
 export async function saveUserPrediction(
-	gameId: string,
+	gameId: number,
 	tgUser: User,
 	home: string,
 	away: string,
-	score: string
+	score: string,
+	round: number
 ) {
 	const [homeGoalsStr, awayGoalsStr] = score.split('-')
 	const homeGoals = parseInt(homeGoalsStr!, 10)
@@ -22,6 +23,7 @@ export async function saveUserPrediction(
 		home,
 		away,
 		homeGoals,
-		awayGoals
+		awayGoals,
+		round
 	)
 }

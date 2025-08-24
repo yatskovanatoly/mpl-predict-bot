@@ -1,34 +1,11 @@
-// supabaseClient.ts
 import { createClient } from '@supabase/supabase-js'
 import 'dotenv/config'
 import type { User } from 'grammy/types'
 
-// Types
-export type LeaderboardRow = {
-	id: string
-	username: string
-	points: number
-	created_on: string
-}
-
-export type PredictionRow = {
-	id: string
-	user_id: string
-	home_team: string
-	away_team: string
-	home_goals: number
-	away_goals: number
-	created_on: string
-}
-
-// Init
 const supabaseUrl = process.env.SUPABASE_URL as string
 const supabaseKey = process.env.SUPABASE_ANON_KEY as string
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
-/**
- * Leaderboard functions
- */
 export async function getLeaderboard(): Promise<LeaderboardRow[]> {
 	const { data, error } = await supabase
 		.from('leaderboard')
@@ -38,13 +15,13 @@ export async function getLeaderboard(): Promise<LeaderboardRow[]> {
 	return data
 }
 
-export async function getUserByUsername(
-	username?: string
+export async function getUserById(
+	userId: number
 ): Promise<LeaderboardRow | null> {
 	const { data, error } = await supabase
 		.from('leaderboard')
 		.select('*')
-		.eq('username', username)
+		.eq('id', userId)
 		.maybeSingle()
 	if (error) throw error
 	return data
@@ -54,7 +31,6 @@ export async function updateScore(
 	userId: string,
 	delta: number
 ): Promise<LeaderboardRow> {
-	// Fetch current score
 	const { data: user, error: fetchError } = await supabase
 		.from('leaderboard')
 		.select('score')
@@ -74,28 +50,26 @@ export async function updateScore(
 	return data
 }
 
-/**
- * Predictions functions
- */
 export async function createPrediction(
 	tgUser: User,
-	gameId: string,
+	gameId: number,
 	homeTeam: string,
 	awayTeam: string,
 	homeGoals: number,
-	awayGoals: number
+	awayGoals: number,
+	round: number
 ): Promise<PredictionRow> {
 	const { data, error } = await supabase
 		.from('predictions')
 		.insert({
 			user_id: tgUser.id,
-			game_id: parseInt(gameId.replace('game_', '')),
+			game_id: gameId,
 			home_team: homeTeam,
 			away_team: awayTeam,
 			home_goals: homeGoals,
 			away_goals: awayGoals,
 			username: tgUser.username,
-			round: 1,
+			round,
 		})
 		.select()
 		.single()
@@ -107,15 +81,15 @@ export async function createPrediction(
 }
 
 export async function getPredictionsByUser(
-	username: string
+	userId: number
 ): Promise<PredictionRow[]> {
-	const user = await getUserByUsername(username)
+	const user = await getUserById(userId)
 	if (!user) return []
 	const { data, error } = await supabase
 		.from('predictions')
 		.select('*')
 		.eq('user_id', user.id)
-		.order('created_on', { ascending: false })
+		.order('created_at', { ascending: false })
 	if (error) throw error
 	return data
 }
@@ -124,7 +98,26 @@ export async function getAllPredictions(): Promise<PredictionRow[]> {
 	const { data, error } = await supabase
 		.from('predictions')
 		.select('*')
-		.order('created_on', { ascending: false })
+		.order('created_at', { ascending: false })
 	if (error) throw error
 	return data
+}
+
+export type LeaderboardRow = {
+	id: string
+	username: string
+	points: number
+	created_on: string
+}
+
+export type PredictionRow = {
+	id: string
+	user_id: string
+	home_team: string
+	away_team: string
+	home_goals: number
+	away_goals: number
+	created_on: string
+	game_id: number
+	round: number
 }
