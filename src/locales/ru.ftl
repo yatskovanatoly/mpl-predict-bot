@@ -1,5 +1,5 @@
 start = чем займёмся?
-menu = ⬅️ в меню
+menu = ⬅️ меню
 predict = ⚽ сделать прогноз
 predicted = твои прогнозы на этот тур:
 leaderboard = 📊 посмотреть таблицу лидеров
@@ -10,5 +10,6 @@ prediction_made = ✅ прогноз сделан\!{$n}*{$home}* – *{$away}* �
 prediction_fail = ❌ не удалось сделать прогноз. Ошибка: <blockquote expandable><code>{$err}</code></blockquote>
 leaderboard_empty = в таблице ещё никого нет
 leaderboard_fail = ❌ не удалось загрузить таблицу
+error_score = некорректный формат счёта
 
 fallback = отправьте /start чтобы начать

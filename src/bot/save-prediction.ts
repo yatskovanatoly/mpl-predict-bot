@@ -1,9 +1,10 @@
 import type { User } from 'grammy/types'
 import { createPrediction } from '../supabase-client.js'
+import type { MyContext } from './index.js'
 
 export async function saveUserPrediction(
 	gameId: number,
-	tgUser: User,
+	ctx: MyContext,
 	home: string,
 	away: string,
 	score: string,
@@ -14,11 +15,11 @@ export async function saveUserPrediction(
 	const awayGoals = parseInt(awayGoalsStr!, 10)
 
 	if (isNaN(homeGoals) || isNaN(awayGoals)) {
-		throw new Error('Invalid score format')
+		throw new Error(ctx.t('error_score'))
 	}
 
 	return await createPrediction(
-		tgUser,
+		ctx.from!,
 		gameId,
 		home,
 		away,

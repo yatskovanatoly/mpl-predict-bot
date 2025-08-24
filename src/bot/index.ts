@@ -6,16 +6,15 @@ import {
 	InlineKeyboard,
 	MemorySessionStorage,
 	session,
-	type CommandContext,
 	type SessionFlavor,
 } from 'grammy'
 import getData from '../harvest-data.js'
+import { buildMainMenu, buildRoundMenu } from '../helpers/build-menus.js'
+import { parseGameId } from '../helpers/parse-game-id.js'
 import { sanitizeScore } from '../helpers/parse-score.js'
 import { getLeaderboard, getPredictionsByUser } from '../supabase-client.js'
 import type { Game } from '../types.js'
 import { saveUserPrediction } from './save-prediction.js'
-import { parseGameId } from '../helpers/parse-game-id.js'
-import { buildMainMenu, buildRoundMenu } from '../helpers/build-menus.js'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
@@ -142,7 +141,7 @@ bot.on('message:text', async (ctx) => {
 		try {
 			await saveUserPrediction(
 				id,
-				ctx.from,
+				ctx,
 				home.team!,
 				away.team!,
 				score,
