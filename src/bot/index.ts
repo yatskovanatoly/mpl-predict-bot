@@ -6,6 +6,7 @@ import {
 	InlineKeyboard,
 	MemorySessionStorage,
 	session,
+	type CommandContext,
 	type SessionFlavor,
 } from 'grammy'
 import getData from '../harvest-data.js'
@@ -14,6 +15,7 @@ import { getLeaderboard, getPredictionsByUser } from '../supabase-client.js'
 import type { Game } from '../types.js'
 import { saveUserPrediction } from './save-prediction.js'
 import { parseGameId } from '../helpers/parse-game-id.js'
+import { buildMainMenu, buildRoundMenu } from '../helpers/build-menus.js'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
@@ -27,6 +29,9 @@ const i18n = new I18n<MyContext>({
 	directory: 'src/locales',
 })
 
+const menu = new InlineKeyboard()
+const roundMenu = new InlineKeyboard()
+
 bot
 	.use(
 		session({
@@ -37,7 +42,7 @@ bot
 	.use(i18n)
 
 bot.command('start', (ctx) => {
-	const menu = new InlineKeyboard()
+	menu
 		.text(ctx.t('predict'), 'predict')
 		.row()
 		.text(ctx.t('leaderboard'), 'leaderboard')
@@ -45,20 +50,45 @@ bot.command('start', (ctx) => {
 })
 
 bot.callbackQuery('predict', async (ctx) => {
-	const usersPredictions = await getPredictionsByUser(ctx.from.id)
-	const roundMenu = new InlineKeyboard()
+	const usersPredictions = await getPredictionsByUser(ctx.from.id, 1)
 
-	games.games.forEach(({ id, home, away }) => {
-		const hasPrediction = usersPredictions.some((p) => p.game_id === id)
+	const gamesWithPrediction: Game[] = []
+	const gamesWithoutPrediction: Game[] = []
 
-		if (hasPrediction) return null
+	games.games.forEach((game) => {
+		const hasPrediction = usersPredictions.some((p) => p.game_id === game.id)
+		if (hasPrediction) {
+			gamesWithPrediction.push(game)
+		} else {
+			gamesWithoutPrediction.push(game)
+		}
+	})
+
+	gamesWithoutPrediction.forEach(({ id, home, away }) => {
 		roundMenu.text(`${home.team} — ${away.team}`, `game_${id}`)
 		roundMenu.row()
 	})
+
+	roundMenu.text(ctx.t('menu'), 'menu')
+
 	await ctx.answerCallbackQuery()
-	await ctx.editMessageText(ctx.t('match_select'), {
-		reply_markup: roundMenu,
-	})
+	if (!!gamesWithoutPrediction.length)
+		await ctx.editMessageText(ctx.t('match_select'), {
+			reply_markup: buildRoundMenu(
+				ctx,
+				games.games,
+				usersPredictions.map((p) => p.game_id)
+			),
+		})
+	if (!!usersPredictions.length)
+		await ctx.reply(
+			`${ctx.t('predicted')}\n\n${usersPredictions
+				.map(
+					({ home_team, away_team, home_goals, away_goals }) =>
+						`${home_team} – ${away_team} → ${home_goals}:${away_goals}`
+				)
+				.join('\n')}`
+		)
 })
 
 bot.on('callback_query:data', async (ctx) => {
@@ -96,6 +126,10 @@ bot.on('callback_query:data', async (ctx) => {
 			return
 		}
 	}
+
+	if (data === 'menu') {
+		ctx.reply(ctx.t('start'), { reply_markup: buildMainMenu(ctx) })
+	}
 })
 
 bot.on('message:text', async (ctx) => {
@@ -113,17 +147,24 @@ bot.on('message:text', async (ctx) => {
 				away.team!,
 				score,
 				round
-			)
-			await ctx.reply(
-				ctx.t('prediction_made', {
-					n: '\n\n',
-					home: home.team,
-					away: away.team,
-					homeGoals: homeGoals!,
-					awayGoals: awayGoals!,
-				}),
-				{ parse_mode: 'MarkdownV2' }
-			)
+			).then(async () => {
+				await ctx.reply(
+					ctx.t('prediction_made', {
+						n: '\n\n',
+						home: home.team,
+						away: away.team,
+						homeGoals: homeGoals!,
+						awayGoals: awayGoals!,
+					}),
+					{ parse_mode: 'MarkdownV2' }
+				)
+				const predicted = await getPredictionsByUser(ctx.from.id, 1).then(
+					(data) => data.map((p) => p.game_id)
+				)
+				await ctx.reply(ctx.t('match_select'), {
+					reply_markup: buildRoundMenu(ctx, games.games, predicted),
+				})
+			})
 			return (ctx.session.game = undefined)
 		} catch (err) {
 			console.error(err)
@@ -146,4 +187,4 @@ bot.on('message:text', async (ctx) => {
 bot.start()
 
 type SessionData = { game: Game | undefined }
-type MyContext = Context & SessionFlavor<SessionData> & I18nFlavor
+export type MyContext = Context & SessionFlavor<SessionData> & I18nFlavor

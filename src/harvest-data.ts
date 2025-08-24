@@ -2,6 +2,7 @@ import axios from 'axios'
 import * as cheerio from 'cheerio'
 import { BASE_URL, MPL_ID } from './urls.js'
 import type { Game, RoundData, Rounds } from './types.js'
+import { sanitizeTeamName } from './helpers/sanitize-team-name.js'
 
 const getCheerio = async (round?: number): Promise<cheerio.CheerioAPI> => {
 	const response = await axios.get(
@@ -46,7 +47,7 @@ const getData = async (round?: number): Promise<RoundData> => {
 
 					game[className as 'home' | 'away'] = {
 						id,
-						team: $child.text().trim(),
+						team: sanitizeTeamName($child.text()).trim(),
 						logo: imgUrl ?? '',
 					}
 				} else if (className === 'score') {

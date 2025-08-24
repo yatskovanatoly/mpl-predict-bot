@@ -81,7 +81,8 @@ export async function createPrediction(
 }
 
 export async function getPredictionsByUser(
-	userId: number
+	userId: number,
+	round: number
 ): Promise<PredictionRow[]> {
 	const user = await getUserById(userId)
 	if (!user) return []
@@ -89,6 +90,7 @@ export async function getPredictionsByUser(
 		.from('predictions')
 		.select('*')
 		.eq('user_id', user.id)
+		.eq('round', round)
 		.order('created_at', { ascending: false })
 	if (error) throw error
 	return data
