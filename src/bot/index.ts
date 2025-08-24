@@ -1,6 +1,7 @@
 import {
 	Bot,
 	Context,
+	GrammyError,
 	InlineKeyboard,
 	MemorySessionStorage,
 	session,
@@ -11,40 +12,44 @@ import { sanitizeScore } from '../parse-score.js'
 import { getLeaderboard } from '../supabase-client.js'
 import type { Game } from '../types.js'
 import { saveUserPrediction } from './save-prediction.js'
+import { I18n, type I18nFlavor } from '@grammyjs/i18n'
+import { PostgrestError } from '@supabase/supabase-js'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
 const bot = new Bot<MyContext>(token)
 const games = await getData()
 
-bot.use(
-	session({
-		initial: (): SessionData => ({ game: undefined }),
-		storage: new MemorySessionStorage(),
-	})
-)
-
-// --- /start ---
-bot.command('start', (ctx) => {
-	ctx.reply('Welcome! Choose an option:', { reply_markup: menu })
+const i18n = new I18n<MyContext>({
+	defaultLocale: 'ru',
+	directory: 'src/locales',
 })
 
-// --- Main Menu Keyboard ---
-const menu = new InlineKeyboard()
-	.text('⚽ Make Prediction', 'predict')
-	.row()
-	.text('📊 See Table', 'leaderboard')
+bot
+	.use(
+		session({
+			initial: (): SessionData => ({ game: undefined }),
+			storage: new MemorySessionStorage(),
+		})
+	)
+	.use(i18n)
 
-// --- Dynamic Games Keyboard ---
-const roundMenu = new InlineKeyboard()
-games.games.forEach(({ id, home, away }) => {
-	roundMenu.text(`${home.team} — ${away.team}`, `${id}`)
-	roundMenu.row()
+bot.command('start', (ctx) => {
+	const menu = new InlineKeyboard()
+		.text(ctx.t('predict'), 'predict')
+		.row()
+		.text(ctx.t('leaderboard'), 'leaderboard')
+	ctx.reply(ctx.t('start'), { reply_markup: menu })
 })
 
 bot.callbackQuery('predict', async (ctx) => {
+	const roundMenu = new InlineKeyboard()
+	games.games.forEach(({ id, home, away }) => {
+		roundMenu.text(`${home.team} — ${away.team}`, `${id}`)
+		roundMenu.row()
+	})
 	await ctx.answerCallbackQuery()
-	await ctx.editMessageText('Select a match to predict:', {
+	await ctx.editMessageText(ctx.t('match_select'), {
 		reply_markup: roundMenu,
 	})
 })
@@ -59,19 +64,19 @@ bot.on('callback_query:data', async (ctx) => {
 		ctx.session.game = game
 
 		await ctx.reply(
-			`Какой счёт будет в матче ${game?.home.team} - ${game?.away.team}?`
+			`${ctx.t('match')} ${game?.home.team} - ${game?.away.team}?`
 		)
 	}
+
 	if (data === 'leaderboard') {
 		try {
 			const leaderboard = await getLeaderboard()
-			console.log(leaderboard)
 			if (!leaderboard || leaderboard.length === 0) {
 				await ctx.reply('No data yet.')
 				return
 			}
 
-			let table = '📊 Leaderboard:\n\n'
+			let table = `${ctx.t('leaderboard_view')}\n\n`
 			leaderboard.forEach((p, i) => {
 				table += `${i + 1}. ${p.username} — ${p.points} pts\n`
 			})
@@ -96,26 +101,34 @@ bot.on('message:text', async (ctx) => {
 		try {
 			await saveUserPrediction(id, ctx.from, home.team!, away.team!, score)
 			await ctx.reply(
-				`✅ Prediction saved: *${home.team}* : *${away.team}* → ${homeGoals}\\-${awayGoals}`,
+				ctx.t('prediction_made', {
+					home: home.team,
+					away: away.team,
+					homeGoals: homeGoals!,
+					awayGoals: awayGoals!,
+				}),
 				{ parse_mode: 'MarkdownV2' }
 			)
 			return (ctx.session.game = undefined)
 		} catch (err) {
 			console.error(err)
+			const errMessage = err as PostgrestError
 			await ctx.reply(
-				`❌ Failed to save prediction. Make sure format is correct. \n ${JSON.stringify(
-					err
-				)}`
+				ctx.t('prediction_fail', {
+					err: errMessage.message,
+				}),
+				{
+					parse_mode: 'HTML',
+				}
 			)
 		}
 	}
 
 	// Fallback
-	await ctx.reply('Use the menu or follow instructions.')
-	return (ctx.session.game = undefined)
+	await ctx.reply(ctx.t('fallback'))
 })
 
 bot.start()
 
 type SessionData = { game: Game | undefined }
-type MyContext = Context & SessionFlavor<SessionData>
+type MyContext = Context & SessionFlavor<SessionData> & I18nFlavor
