@@ -72,7 +72,7 @@ bot.on('callback_query:data', async (ctx) => {
 		try {
 			const leaderboard = await getLeaderboard()
 			if (!leaderboard || leaderboard.length === 0) {
-				await ctx.reply('No data yet.')
+				await ctx.reply(ctx.t('leaderboard_empty'))
 				return
 			}
 
@@ -85,7 +85,7 @@ bot.on('callback_query:data', async (ctx) => {
 			return
 		} catch (err) {
 			console.error(err)
-			await ctx.reply('❌ Could not load leaderboard.')
+			await ctx.reply(ctx.t('leaderboard_fail'))
 			return
 		}
 	}
