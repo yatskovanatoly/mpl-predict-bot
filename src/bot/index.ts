@@ -8,14 +8,21 @@ import {
 	session,
 	type SessionFlavor,
 } from 'grammy'
-import getData from '../harvest-data.js'
-import { buildMainMenu, buildRoundMenu } from '../helpers/build-menus.js'
+import getData from '../../lib/harvest-data.js'
+import {
+	getLeaderboard,
+	getPredictionsByUser,
+} from '../../lib/supabase-client.js'
+import type { Game } from '../../lib/types.js'
+import { BASE_URL } from '../../lib/urls.js'
+import {
+	buildMainMenu,
+	buildRoundMenu,
+	menuButtonMarkup,
+} from '../helpers/build-menus.js'
 import { parseGameId } from '../helpers/parse-game-id.js'
 import { sanitizeScore } from '../helpers/parse-score.js'
-import { getLeaderboard, getPredictionsByUser } from '../supabase-client.js'
-import type { Game } from '../types.js'
 import { saveUserPrediction } from './save-prediction.js'
-import { BASE_URL } from '../urls.js'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
@@ -46,7 +53,7 @@ bot.command('start', (ctx) => {
 		.text(ctx.t('predict'), 'predict')
 		.row()
 		.text(ctx.t('leaderboard'), 'leaderboard')
-	ctx.reply(ctx.t('start'), { reply_markup: menu })
+	ctx.reply(ctx.t('start'), { reply_markup: buildMainMenu(ctx) })
 })
 
 bot.callbackQuery('predict', async (ctx) => {
@@ -73,21 +80,21 @@ bot.callbackQuery('predict', async (ctx) => {
 
 	await ctx.answerCallbackQuery()
 	if (!!gamesWithoutPrediction.length)
-		await ctx.editMessageText(ctx.t('match_select'), {
-			reply_markup: buildRoundMenu(
-				ctx,
-				games.games,
-				usersPredictions.map((p) => p.game_id)
-			),
-		})
-	if (!!usersPredictions.length)
-		await ctx.reply(
-			`${ctx.t('predicted')}\n\n${usersPredictions
+		await ctx.editMessageText(
+			`${!!usersPredictions.length && ctx.t('predicted')}\n\n${usersPredictions
 				.map(
 					({ home_team, away_team, home_goals, away_goals }) =>
 						`${home_team} – ${away_team} → ${home_goals}:${away_goals}`
 				)
-				.join('\n')}`
+				.join('\n')}\n
+      ${ctx.t('match_select').trim()}`,
+			{
+				reply_markup: buildRoundMenu(
+					ctx,
+					games.games,
+					usersPredictions.map((p) => p.game_id)
+				),
+			}
 		)
 })
 
@@ -117,7 +124,9 @@ bot.on('callback_query:data', async (ctx) => {
 		try {
 			const leaderboard = await getLeaderboard()
 			if (!leaderboard || leaderboard.length === 0) {
-				await ctx.reply(ctx.t('leaderboard_empty'))
+				await ctx.reply(ctx.t('leaderboard_empty'), {
+					reply_markup: menuButtonMarkup(ctx),
+				})
 				return
 			}
 
@@ -126,17 +135,19 @@ bot.on('callback_query:data', async (ctx) => {
 				table += `${i + 1}. ${p.username} — ${p.points} pts\n`
 			})
 
-			await ctx.reply(table)
+			await ctx.editMessageText(table, {
+				reply_markup: menuButtonMarkup(ctx),
+			})
 			return
 		} catch (err) {
 			console.error(err)
-			await ctx.reply(ctx.t('leaderboard_fail'))
+			await ctx.reply(ctx.t('leaderboard_fail'), {})
 			return
 		}
 	}
 
 	if (data === 'menu') {
-		ctx.reply(ctx.t('start'), { reply_markup: buildMainMenu(ctx) })
+		ctx.editMessageText(ctx.t('start'), { reply_markup: buildMainMenu(ctx) })
 	}
 })
 

@@ -1,6 +1,6 @@
 import { InlineKeyboard } from 'grammy'
 import type { MyContext } from '../bot/index.js'
-import type { Game } from '../types.js'
+import type { Game } from '../../lib/types.js'
 
 export function buildMainMenu(ctx: MyContext) {
 	return new InlineKeyboard()
@@ -25,3 +25,6 @@ export function buildRoundMenu(
 	kb.text(ctx.t('menu'), 'menu')
 	return kb
 }
+
+export const menuButtonMarkup = (ctx: MyContext) =>
+	new InlineKeyboard().text(ctx.t('menu'), 'menu')

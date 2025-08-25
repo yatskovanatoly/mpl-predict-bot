@@ -1,5 +1,5 @@
 import type { User } from 'grammy/types'
-import { createPrediction } from '../supabase-client.js'
+import { createPrediction } from '../../lib/supabase-client.js'
 import type { MyContext } from './index.js'
 
 export async function saveUserPrediction(

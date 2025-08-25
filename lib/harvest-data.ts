@@ -1,8 +1,8 @@
 import axios from 'axios'
 import * as cheerio from 'cheerio'
-import { BASE_URL, MPL_ID } from './urls.js'
+import { sanitizeTeamName } from '../src/helpers/sanitize-team-name.js'
 import type { Game, RoundData, Rounds } from './types.js'
-import { sanitizeTeamName } from './helpers/sanitize-team-name.js'
+import { BASE_URL, MPL_ID } from './urls.js'
 
 const getCheerio = async (round?: number): Promise<cheerio.CheerioAPI> => {
 	const response = await axios.get(
