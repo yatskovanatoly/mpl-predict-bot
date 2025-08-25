@@ -1,7 +1,7 @@
 import type { GrammyError } from 'grammy'
 
 export type RoundData = {
-	date: string
+	date: Date
 	games: Game[]
 	round: number
 }
@@ -9,7 +9,7 @@ export type RoundData = {
 export type Team = {
 	id: string
 	team: string
-	logo?: string
+	logo?: string | undefined
 }
 
 export type Game = {
@@ -20,6 +20,7 @@ export type Game = {
 	time?: string | undefined
 	game_id: number
 	round: number
+  date: Date
 }
 
 export type Rounds = {

@@ -3,6 +3,8 @@ import * as cheerio from 'cheerio'
 import { sanitizeTeamName } from '../src/helpers/sanitize-team-name.js'
 import type { Game, RoundData, Rounds } from './types.js'
 import { BASE_URL, MPL_ID } from './urls.js'
+import { parse } from 'date-fns'
+import { ru } from 'date-fns/locale'
 
 const getCheerio = async (round?: number): Promise<cheerio.CheerioAPI> => {
 	const response = await axios.get(
@@ -26,6 +28,9 @@ const getData = async (roundN?: number): Promise<RoundData> => {
 	const $ = await getCheerio(roundN)
 	const date = $('.category2').text().trim() || ''
 	const round = Number($('.current').text())
+	const parsedRoundDate = parse(date, 'd MMMM, EEEE', new Date(), {
+		locale: ru,
+	})
 
 	try {
 		$('.result').each((i, el) => {
@@ -33,9 +38,22 @@ const getData = async (roundN?: number): Promise<RoundData> => {
 			const id = Number($(el).parent().attr('id')!.replace('game_', ''))
 			const time = $(el).parent().find('.date').text().trim()
 
-			const game: Partial<Game> = {
+			const game: Game = {
 				id,
 				round,
+				home: {
+					id: '',
+					team: '',
+					logo: undefined,
+				},
+				away: {
+					id: '',
+					team: '',
+					logo: undefined,
+				},
+				score: '',
+				game_id: 0,
+				date: parsedRoundDate,
 			}
 
 			row.each((_, child) => {
@@ -57,12 +75,12 @@ const getData = async (roundN?: number): Promise<RoundData> => {
 				}
 				game.time = !game.score ? time : undefined
 			})
-			games.push(game as Game)
+			games.push(game)
 		})
 	} catch (e) {
 		console.error(e)
 	}
-	return { date, games, round }
+	return { date: parsedRoundDate, games, round }
 }
 
 export const getRounds = async (round?: number): Promise<Rounds> => {
