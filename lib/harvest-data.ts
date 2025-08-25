@@ -21,10 +21,11 @@ const getCheerio = async (round?: number): Promise<cheerio.CheerioAPI> => {
 	return $
 }
 
-const getData = async (round?: number): Promise<RoundData> => {
+const getData = async (roundN?: number): Promise<RoundData> => {
 	const games: Game[] = []
-	const $ = await getCheerio(round)
+	const $ = await getCheerio(roundN)
 	const date = $('.category2').text().trim() || ''
+	const round = Number($('.current').text())
 
 	try {
 		$('.result').each((i, el) => {
@@ -34,6 +35,7 @@ const getData = async (round?: number): Promise<RoundData> => {
 
 			const game: Partial<Game> = {
 				id,
+				round,
 			}
 
 			row.each((_, child) => {
@@ -60,7 +62,7 @@ const getData = async (round?: number): Promise<RoundData> => {
 	} catch (e) {
 		console.error(e)
 	}
-	return { date, games }
+	return { date, games, round }
 }
 
 export const getRounds = async (round?: number): Promise<Rounds> => {
