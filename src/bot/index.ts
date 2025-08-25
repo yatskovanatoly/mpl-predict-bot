@@ -4,6 +4,7 @@ import {
 	Bot,
 	Context,
 	InlineKeyboard,
+	InputFile,
 	MemorySessionStorage,
 	session,
 	type SessionFlavor,
@@ -23,6 +24,7 @@ import {
 import { parseGameId } from '../helpers/parse-game-id.js'
 import { sanitizeScore } from '../helpers/parse-score.js'
 import { saveUserPrediction } from './save-prediction.js'
+import { logosMap } from '../../lib/logos-by-id.js'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
@@ -86,8 +88,7 @@ bot.callbackQuery('predict', async (ctx) => {
 					({ home_team, away_team, home_goals, away_goals }) =>
 						`${home_team} – ${away_team} → ${home_goals}:${away_goals}`
 				)
-				.join('\n')}\n
-      ${ctx.t('match_select').trim()}`,
+				.join('\n')}\n\n${ctx.t('match_select')}`,
 			{
 				reply_markup: buildRoundMenu(
 					ctx,
@@ -107,17 +108,18 @@ bot.on('callback_query:data', async (ctx) => {
 
 		ctx.session.game = game
 
-		await ctx.replyWithMediaGroup([
-			{
-				type: 'photo',
-				media: `${BASE_URL}/${game?.home.logo!}`,
-				caption: `${ctx.t('match')} ${game?.home.team} - ${game?.away.team}?`,
-			},
-			{
-				type: 'photo',
-				media: `${BASE_URL}/${game?.away.logo!}`,
-			},
-		])
+		if (game)
+			await ctx.replyWithMediaGroup([
+				{
+					type: 'photo',
+					media: new InputFile(logosMap[game.home.id]!),
+					caption: `${ctx.t('match')} ${game?.home.team} - ${game?.away.team}?`,
+				},
+				{
+					type: 'photo',
+					media: new InputFile(logosMap[game.away.id]!),
+				},
+			])
 	}
 
 	if (data === 'leaderboard') {
@@ -199,7 +201,6 @@ bot.on('message:text', async (ctx) => {
 		}
 	}
 
-	// Fallback
 	await ctx.reply(ctx.t('fallback'))
 })
 
