@@ -1,0 +1,2 @@
+export const userPredictionIteratee = ({ home_team, away_team, home_goals, away_goals, }) => `${home_team} – ${away_team} → ${home_goals}:${away_goals}`;
+//# sourceMappingURL=user-prediction-iteratee.js.map

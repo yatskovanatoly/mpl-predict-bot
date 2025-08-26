@@ -42,6 +42,7 @@
 		"noUncheckedSideEffectImports": true,
 		"moduleDetection": "force",
 		"skipLibCheck": true
-	}
-	// "include": ["**/*.ts"]
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["./supabase", "./build"]
 }
