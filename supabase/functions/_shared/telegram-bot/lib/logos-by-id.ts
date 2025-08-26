@@ -1,5 +1,112 @@
-const BASE_PATH = 'src/mpl-teams-logos'
-const getPath = (team: string) => `${BASE_PATH}/${team}.png`
+const logos = [
+	{
+		name: 'bedros.png',
+		key: 'F0i2RuICzmMaxp8cvQ4al6TCfScAkVqhtrLD1WoH8bIO9mzP',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMaxp8cvQ4al6TCfScAkVqhtrLD1WoH8bIO9mzP',
+		size: 84695,
+		uploadedAt: '2025-08-26T17:14:56.000Z',
+	},
+	{
+		name: 'vp.png',
+		key: 'F0i2RuICzmMamjl4mbFvVTeF85fl2D1chCz6m4b0vRHZNsrx',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMamjl4mbFvVTeF85fl2D1chCz6m4b0vRHZNsrx',
+		size: 113629,
+		uploadedAt: '2025-08-26T17:14:56.000Z',
+	},
+	{
+		name: 'drugi.png',
+		key: 'F0i2RuICzmMa7d1ZU9zR8ebuiAGmFPL3vYw12W4M0IK5ThrJ',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMa7d1ZU9zR8ebuiAGmFPL3vYw12W4M0IK5ThrJ',
+		size: 59565,
+		uploadedAt: '2025-08-26T17:14:56.000Z',
+	},
+	{
+		name: 'sd.png',
+		key: 'F0i2RuICzmMaOqWCrqi5WqE7XKouMAJQc2UTjDNmtyCbhk8V',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMaOqWCrqi5WqE7XKouMAJQc2UTjDNmtyCbhk8V',
+		size: 57523,
+		uploadedAt: '2025-08-26T17:14:56.000Z',
+	},
+	{
+		name: 'petruch.png',
+		key: 'F0i2RuICzmMabX9mqyJqrW3NgwI8QKpUfGcCixHVDRdYFsk9',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMabX9mqyJqrW3NgwI8QKpUfGcCixHVDRdYFsk9',
+		size: 21868,
+		uploadedAt: '2025-08-26T17:14:56.000Z',
+	},
+	{
+		name: 'kid.png',
+		key: 'F0i2RuICzmMavqqNZqh1lp1tUqEJ24NPA3fFdSYCZ85wkBjV',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMavqqNZqh1lp1tUqEJ24NPA3fFdSYCZ85wkBjV',
+		size: 35436,
+		uploadedAt: '2025-08-26T17:14:53.000Z',
+	},
+	{
+		name: 'shit.png',
+		key: 'F0i2RuICzmMaE37LXzIRGQyxPfE2zUavRYXCiSjDcrO0I1hF',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMaE37LXzIRGQyxPfE2zUavRYXCiSjDcrO0I1hF',
+		size: 69400,
+		uploadedAt: '2025-08-26T17:14:53.000Z',
+	},
+	{
+		name: 'raketa.png',
+		key: 'F0i2RuICzmMaaHSVvLAn5V8rUvElOmzkB0bh3GZcIe9gDPsy',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMaaHSVvLAn5V8rUvElOmzkB0bh3GZcIe9gDPsy',
+		size: 96728,
+		uploadedAt: '2025-08-26T17:14:53.000Z',
+	},
+	{
+		name: 'flirt.png',
+		key: 'F0i2RuICzmMaV3ZoHKXCsK7R9h1XI5ZvqpdkJxTQ8AyrUjFE',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMaV3ZoHKXCsK7R9h1XI5ZvqpdkJxTQ8AyrUjFE',
+		size: 46538,
+		uploadedAt: '2025-08-26T17:14:53.000Z',
+	},
+	{
+		name: 'td.png',
+		key: 'F0i2RuICzmMa2z244b8J1wmjOYplaBdPusnGZMV7irX40fqv',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMa2z244b8J1wmjOYplaBdPusnGZMV7irX40fqv',
+		size: 78742,
+		uploadedAt: '2025-08-26T17:14:53.000Z',
+	},
+	{
+		name: 'chns.png',
+		key: 'F0i2RuICzmMaYHvx76UcfzdlVOiI1Zb3vLM9s5P8gaKquCQA',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMaYHvx76UcfzdlVOiI1Zb3vLM9s5P8gaKquCQA',
+		size: 63072,
+		uploadedAt: '2025-08-26T17:14:53.000Z',
+	},
+	{
+		name: 'kleschi.png',
+		key: 'F0i2RuICzmMaDVuQWsG6FYu8faRvZQtnHxW9qy2eh5iCBGAj',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMaDVuQWsG6FYu8faRvZQtnHxW9qy2eh5iCBGAj',
+		size: 80189,
+		uploadedAt: '2025-08-26T17:14:53.000Z',
+	},
+	{
+		name: 'baldyozh.png',
+		key: 'F0i2RuICzmMaASnVVSTKbufd9TaZEQHcXnpJ1w4M2RkrDtNO',
+		customId: null,
+		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMaASnVVSTKbufd9TaZEQHcXnpJ1w4M2RkrDtNO',
+		size: 39852,
+		uploadedAt: '2025-08-26T17:14:53.000Z',
+	},
+]
+
+const getPath = (team: string) =>
+	logos.find((logo) => logo.name.split('.')[0] === team)!.url
 
 export const logosMap: Record<string, string> = {
 	'5296': getPath('shit'),
