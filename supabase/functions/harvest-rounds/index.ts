@@ -1,7 +1,7 @@
 // Setup type definitions for built-in Supabase Runtime APIs
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { DOMParser } from 'jsr:@b-fuze/deno-dom'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const headers = {
 	'Content-Type': 'application/json',
