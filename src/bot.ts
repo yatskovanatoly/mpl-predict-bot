@@ -2,20 +2,20 @@ import { I18n, type I18nFlavor } from '@grammyjs/i18n'
 import { PostgrestError } from '@supabase/supabase-js'
 import { differenceInDays } from 'date-fns'
 import {
-  Bot,
-  Context,
-  InlineKeyboard,
-  InputFile,
-  MemorySessionStorage,
-  session,
-  type SessionFlavor
+	Bot,
+	Context,
+	InlineKeyboard,
+	InputFile,
+	MemorySessionStorage,
+	session,
+	type SessionFlavor,
 } from 'grammy'
 import { saveUserPrediction } from './bot/save-prediction'
 import { userPredictionIteratee } from './bot/user-prediction-iteratee'
 import {
-  buildMainMenu,
-  buildMenuButton,
-  buildRoundMenu,
+	buildMainMenu,
+	buildMenuButton,
+	buildRoundMenu,
 } from './helpers/build-menus'
 import { editHelper } from './helpers/edit-helper'
 import { parseGameId } from './helpers/parse-game-id'
@@ -24,10 +24,11 @@ import getData from './lib/harvest-data'
 import { logosMap } from './lib/logos-by-id'
 import { getLeaderboard, getPredictionsByUser } from './lib/supabase-client'
 import type { Game } from './lib/types'
+import { bot } from '../api/webhook'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
-export const bot = new Bot<MyContext>(token)
+
 const games = await getData()
 
 const i18n = new I18n<MyContext>({
