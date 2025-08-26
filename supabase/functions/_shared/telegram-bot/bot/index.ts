@@ -90,26 +90,25 @@ bot.callbackQuery('predict', async (ctx: any) => {
 	roundMenu.text(ctx.t('menu'), 'menu')
 
 	await ctx.answerCallbackQuery()
-	if (gamesWithoutPrediction.length) {
-		try {
-			await ctx.editMessageText(
-				`${
-					usersPredictions.length ? ctx.t('predicted', { n: games.round }) : ''
-				}\n\n${usersPredictions
-					.map(userPredictionIteratee)
-					.join('\n')}\n\n${ctx.t('match_select')}`,
-				{
-					reply_markup: buildRoundMenu(
-						ctx,
-						games.games,
-						usersPredictions.map((p: any) => p.game_id)
-					),
-				}
-			)
-		} catch (err) {
-			console.log(err)
-			ctx.reply(JSON.stringify(err))
-		}
+
+	try {
+		await ctx.editMessageText(
+			`${
+				usersPredictions.length ? ctx.t('predicted', { n: games.round }) : ''
+			}\n\n${usersPredictions.map(userPredictionIteratee).join('\n')}\n\n${
+				gamesWithoutPrediction.length ? ctx.t('match_select') : ''
+			}`,
+			{
+				reply_markup: buildRoundMenu(
+					ctx,
+					games.games,
+					usersPredictions.map((p: any) => p.game_id)
+				),
+			}
+		)
+	} catch (err) {
+		console.log(err)
+		ctx.reply(JSON.stringify(err))
 	}
 })
 

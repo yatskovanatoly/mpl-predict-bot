@@ -11,5 +11,8 @@
 		"rules": {
 			"exclude": ["no-explicit-any"]
 		}
+	},
+	"tasks": {
+		"dev": "deno --allow-import --allow-env --allow-net --env=../.env ./functions/telegram-bot/index.ts"
 	}
 }
