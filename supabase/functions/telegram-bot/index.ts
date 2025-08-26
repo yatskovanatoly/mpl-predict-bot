@@ -1,10 +1,6 @@
 import {
-	Context,
-	webhookCallback,
-	type SessionFlavor,
-} from 'https://deno.land/x/grammy@v1.38.1/mod.ts'
-import { type I18nFlavor } from 'npm:@grammyjs/i18n'
-import type { Game } from './lib/types'
+  webhookCallback
+} from 'https://deno.land/x/grammy@v1.38.1/mod.ts';
 import { bot } from "../_shared/telegram-bot/bot/index.ts";
 
 const handleUpdate = webhookCallback(bot, 'std/http')
@@ -21,6 +17,3 @@ Deno.serve(async (req) => {
 	}
 	return new Response()
 })
-
-type SessionData = { game: Game | undefined }
-export type MyContext = Context & SessionFlavor<SessionData> & I18nFlavor

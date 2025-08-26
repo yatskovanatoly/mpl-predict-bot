@@ -1,18 +1,17 @@
+// import { freeStorage } from '@grammyjs/storage-free'
 import {
-  Bot,
-  Context,
-  InlineKeyboard,
-  MemorySessionStorage,
-  session,
-  type SessionFlavor
+	Bot,
+	Context,
+	InlineKeyboard,
+	SessionFlavor,
 } from 'https://deno.land/x/grammy@v1.38.1/mod.ts'
 import { differenceInDays } from 'jsr:@mary/date-fns'
 import { PostgrestError } from 'jsr:@supabase/supabase-js'
 import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n'
 import {
-  buildMainMenu,
-  buildMenuButton,
-  buildRoundMenu,
+	buildMainMenu,
+	buildMenuButton,
+	buildRoundMenu,
 } from '../helpers/build-menus.ts'
 import { editHelper } from '../helpers/edit-helper.ts'
 import { parseGameId } from '../helpers/parse-game-id.ts'
@@ -24,15 +23,24 @@ import { Game } from '../lib/types.ts'
 import ru from '../locales/ru.ts'
 import { saveUserPrediction } from './save-prediction.ts'
 import { userPredictionIteratee } from './user-prediction-iteratee.ts'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { session } from 'https://deno.land/x/grammy@v1.38.1/mod.ts'
+import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
 
 const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
+const supabaseUrl = Deno.env.get('SUPABASE_URL')
+const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
+
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
+if (!supabaseUrl) throw new Error('db url is missing')
+if (!supabaseKey) throw new Error('db key is missing')
 
 export const bot = new Bot<MyContext>(token)
+export const supabase = createClient(supabaseUrl, supabaseKey) as any
 
 const games = await getData()
 
-const i18n = new I18n<MyContext>({
+const i18n = new I18n<any>({
 	defaultLocale: 'ru',
 })
 
@@ -40,14 +48,12 @@ await i18n.loadLocale('ru', { source: ru })
 
 const roundMenu = new InlineKeyboard()
 
-bot
-	.use(
-		session({
-			initial: (): SessionData => ({ game: undefined }),
-			storage: new MemorySessionStorage(),
-		})
-	)
-	.use(i18n)
+bot.use(i18n).use(
+	session({
+		initial: (): SessionData => ({ game: undefined }),
+		storage: supabaseAdapter<SessionData>({ supabase, table: 'memory' }),
+	})
+)
 
 bot.command('start', async (ctx: any) => {
 	ctx.reply(ctx.t('start'), { reply_markup: await buildMainMenu(ctx, games) })
@@ -232,5 +238,7 @@ bot.on('message:text', async (ctx: any) => {
 	await ctx.reply(ctx.t('fallback'))
 })
 
-type SessionData = { game: Game | undefined }
+export type SessionData = {
+	game: Game | undefined
+}
 export type MyContext = Context & SessionFlavor<SessionData> & I18nFlavor

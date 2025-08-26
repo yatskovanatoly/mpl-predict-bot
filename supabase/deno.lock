@@ -20,6 +20,8 @@
     "jsr:@supabase/supabase-js@^2.56.0": "2.56.0",
     "npm:@grammyjs/i18n@*": "1.1.2_grammy@1.38.1",
     "npm:@grammyjs/i18n@^1.1.2": "1.1.2_grammy@1.38.1",
+    "npm:@grammyjs/storage-free@*": "2.5.1",
+    "npm:@grammyjs/storage-supabase@*": "2.5.0_@supabase+supabase-js@2.56.0",
     "npm:@grammyjs/types@*": "3.22.1",
     "npm:@supabase/auth-js@2.71.1": "2.71.1",
     "npm:@supabase/functions-js@2.4.5": "2.4.5",
@@ -115,6 +117,18 @@
         "grammy"
       ]
     },
+    "@grammyjs/storage-free@2.5.1": {
+      "integrity": "sha512-wW9R8zxP8qHe6aZh3HqU11ZPWGko2ou32v0GMo8Ck6dLaVVvzI+oBZO6rM9Ntb54jmCdq+CxgLKPY71pyCG7eg==",
+      "dependencies": [
+        "node-fetch"
+      ]
+    },
+    "@grammyjs/storage-supabase@2.5.0_@supabase+supabase-js@2.56.0": {
+      "integrity": "sha512-6ANvBxfKKEbOPknneHrDB29k/c+RMZmqIIwlLIVeTsMGUi/0IRLMpWieo0qrkvHddUigFwxJ3vgvIqIGbNgzfw==",
+      "dependencies": [
+        "@supabase/supabase-js"
+      ]
+    },
     "@grammyjs/types@3.22.1": {
       "integrity": "sha512-QJX0Y8lpjE+/nuTKGmxybKmvdrLHV7gqbhI/UXoWlJLWtowbwk+oW+ngfHKwegD+ewL2SX8+tQo/1E14Ma0qlw=="
     },
@@ -155,6 +169,17 @@
       "integrity": "sha512-Y+kx/wDgd4oasAgoAq0bsbQojwQ+ejIif8uczZ9qufRHWFLMU5cODT+ApHsSrDufqUcVKt+eyxtOXSkeh2v9ww==",
       "dependencies": [
         "@supabase/node-fetch"
+      ]
+    },
+    "@supabase/supabase-js@2.56.0": {
+      "integrity": "sha512-XqwhHSyVnkjdliPN61CmXsmFGnFHTX2WDdwjG3Ukvdzuu3Trix+dXupYOQ3BueIyYp7B6t0yYpdQtJP2hIInyg==",
+      "dependencies": [
+        "@supabase/auth-js",
+        "@supabase/functions-js",
+        "@supabase/node-fetch",
+        "@supabase/postgrest-js",
+        "@supabase/realtime-js",
+        "@supabase/storage-js"
       ]
     },
     "@types/node-fetch@2.6.13": {
@@ -432,6 +457,8 @@
     "https://deno.land/x/grammy@v1.38.1/platform.deno.ts": "68272a7e1d9a2d74d8a45342526485dbc0531dee812f675d7f8a4e7fc8393028",
     "https://deno.land/x/grammy@v1.38.1/types.deno.ts": "6a9331bfa81f71b2334527f4611f802b2bf8aabf15e80ac2707b079a8b2fe81a",
     "https://deno.land/x/grammy@v1.38.1/types.ts": "729415590dfa188dbe924dea614dff4e976babdbabb28a307b869fc25777cdf0",
+    "https://deno.land/x/grammy_storages@v2.5.1/free/src/adapter.ts": "6f7476d6364e67e5949c77d642f2a9120df40530305b698fa2ee516bc7435ea5",
+    "https://deno.land/x/grammy_storages@v2.5.1/free/src/mod.ts": "6485c5bf548fc73446f54f397660a59ffcaf0bcc465b6050c2c762848c2c0ba5",
     "https://deno.land/x/grammy_types@v3.22.1/api.ts": "ae04d6628e3d25ae805bc07a19475065044fc44cde0a40877405bc3544d03a5f",
     "https://deno.land/x/grammy_types@v3.22.1/checklist.ts": "6b3138470069c4227dfff51bf7409b6b3cd25155a245f6f307d7a1dcc98d8881",
     "https://deno.land/x/grammy_types@v3.22.1/inline.ts": "9afd0340eafd22acb163f2f680d58b85719f0edc92dffa4d259fc5232e543d23",
@@ -453,7 +480,9 @@
       "jsr:@mary/date-fns@~0.1.3",
       "jsr:@supabase/functions-js@^2.4.5",
       "jsr:@supabase/supabase-js@^2.56.0",
-      "npm:@grammyjs/i18n@^1.1.2"
+      "npm:@grammyjs/i18n@^1.1.2",
+      "npm:@grammyjs/storage-free@*",
+      "npm:@grammyjs/storage-supabase@*"
     ]
   }
 }

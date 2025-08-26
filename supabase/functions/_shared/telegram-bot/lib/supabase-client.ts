@@ -1,9 +1,5 @@
-import { createClient } from 'jsr:@supabase/supabase-js@2'
 import type { User } from 'npm:@grammyjs/types'
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')
-const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
-export const supabase = createClient(supabaseUrl!, supabaseKey!)
+import { supabase } from '../bot/index.ts'
 
 export async function getLeaderboard(): Promise<LeaderboardRow[]> {
 	const { data, error } = await supabase
