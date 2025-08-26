@@ -1,7 +1,7 @@
 import { InlineKeyboard } from 'grammy'
-import type { MyContext } from '../bot/index.js'
-import type { Game, RoundData } from '../../lib/types.js'
-import { getPredictionsByUser } from '../../lib/supabase-client.js'
+import type { MyContext } from '../bot.js'
+import type { Game, RoundData } from '../lib/types'
+import { getPredictionsByUser } from '../lib/supabase-client'
 
 export async function buildMainMenu(ctx: MyContext, games: RoundData) {
 	const kb = new InlineKeyboard()

@@ -8,25 +8,23 @@ import {
 	InputFile,
 	MemorySessionStorage,
 	session,
+	webhookCallback,
 	type SessionFlavor,
 } from 'grammy'
-import getData from '../../lib/harvest-data.js'
-import { logosMap } from '../../lib/logos-by-id.js'
-import {
-	getLeaderboard,
-	getPredictionsByUser,
-} from '../../lib/supabase-client.js'
-import type { Game } from '../../lib/types.js'
 import {
 	buildMainMenu,
 	buildMenuButton,
 	buildRoundMenu,
-} from '../helpers/build-menus.js'
-import { editHelper } from '../helpers/edit-helper.js'
-import { parseGameId } from '../helpers/parse-game-id.js'
-import { sanitizeScore } from '../helpers/parse-score.js'
-import { saveUserPrediction } from './save-prediction.js'
-import { userPredictionIteratee } from './user-prediction-iteratee.js'
+} from './helpers/build-menus'
+import { editHelper } from './helpers/edit-helper'
+import { parseGameId } from './helpers/parse-game-id'
+import { sanitizeScore } from './helpers/parse-score'
+import { saveUserPrediction } from './bot/save-prediction'
+import { userPredictionIteratee } from './bot/user-prediction-iteratee'
+import { getLeaderboard, getPredictionsByUser } from './lib/supabase-client'
+import getData from './lib/harvest-data'
+import { logosMap } from './lib/logos-by-id'
+import type { Game } from './lib/types'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
@@ -35,7 +33,7 @@ const games = await getData()
 
 const i18n = new I18n<MyContext>({
 	defaultLocale: 'ru',
-	directory: 'src/locales',
+	directory: 'api/locales',
 })
 
 const roundMenu = new InlineKeyboard()
@@ -236,3 +234,5 @@ bot.start()
 
 type SessionData = { game: Game | undefined }
 export type MyContext = Context & SessionFlavor<SessionData> & I18nFlavor
+
+export default webhookCallback(bot, 'https')

@@ -1,15 +1,11 @@
-// Setup type definitions for built-in Supabase Runtime APIs
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { DOMParser } from 'jsr:@b-fuze/deno-dom'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-const headers = {
-	'Content-Type': 'application/json',
-}
-// Utility: parse games
 export const getRoundGames = (html: string) => {
 	const doc = new DOMParser().parseFromString(html, 'text/html')
 	if (!doc) return []
+
 	const games: {
 		game_id: number
 		time: string
@@ -23,21 +19,18 @@ export const getRoundGames = (html: string) => {
 		events_url: string
 		round: number
 	}[] = []
+
 	const parentDiv = doc.querySelector('#full_forwards')
-	// Loop over each championship table
 	parentDiv!.querySelectorAll('table.championship').forEach((table) => {
-		// Find the preceding <h1 name="stage_name"> for this table
 		const stageEl = table.previousElementSibling
 		let round: number
 		if (
 			stageEl?.tagName === 'H1' &&
 			stageEl.getAttribute('name') === 'stage_name'
 		) {
-			// Extract the number from "Тур 1"
 			const match = stageEl.textContent?.match(/\d+/)
 			round = Number(match![0])
 		}
-		// Loop over each row in the table
 		table.querySelectorAll('tbody tr.game').forEach((row) => {
 			const time = row.querySelector('td.date')?.textContent.trim() ?? ''
 			const homeEl = row.querySelector('td.home a')
@@ -65,21 +58,20 @@ export const getRoundGames = (html: string) => {
 	})
 	return games
 }
+
 Deno.serve(async () => {
 	const url =
-		'https://mychamp.ru/championships/202/games?configuration[type]=games' // replace dynamically
-	// 1. Fetch and parse games
+		'https://mychamp.ru/championships/202/games?configuration[type]=games'
+
 	const res = await fetch(url)
 	const html = await res.text()
 	const games = getRoundGames(html)
-	// return new Response(JSON.stringify(games.map((g)=>g.round)));
-	// 2. Create Supabase client (Edge functions get env vars automatically)
+
 	const supabase = createClient(
 		Deno.env.get('SUPABASE_URL') ?? '',
-		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '' // service role required for inserts
+		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 	)
-	// 3. Insert into your Supabase table
-	// Replace "games" with your actual table name
+
 	const { data, error } = await supabase
 		.from('games')
 		.upsert(games, {
@@ -100,10 +92,13 @@ Deno.serve(async () => {
 	return new Response(
 		JSON.stringify({
 			inserted: data?.length ?? 0,
-			data,
 		}),
 		{
 			headers,
 		}
 	)
 })
+
+const headers = {
+	'Content-Type': 'application/json',
+}

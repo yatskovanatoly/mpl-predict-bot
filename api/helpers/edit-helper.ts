@@ -1,4 +1,4 @@
-import type { MyContext } from '../bot/index.js'
+import type { MyContext } from '../bot.js'
 
 export const editHelper = async (fn: () => Promise<any>, ctx: MyContext) => {
 	try {

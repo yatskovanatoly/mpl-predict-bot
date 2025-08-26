@@ -1,4 +1,4 @@
-import type { PredictionRow } from '../../lib/supabase-client.js'
+import type { PredictionRow } from '../lib/supabase-client'
 
 export const userPredictionIteratee = ({
 	home_team,
