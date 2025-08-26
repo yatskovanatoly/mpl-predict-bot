@@ -28,7 +28,7 @@ import type { Game } from './lib/types'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
-const bot = new Bot<MyContext>(token)
+export const bot = new Bot<MyContext>(token)
 const games = await getData()
 
 const i18n = new I18n<MyContext>({
@@ -234,5 +234,3 @@ bot.start()
 
 type SessionData = { game: Game | undefined }
 export type MyContext = Context & SessionFlavor<SessionData> & I18nFlavor
-
-export default webhookCallback(bot, 'https')

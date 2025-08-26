@@ -3,7 +3,7 @@ import * as cheerio from 'cheerio'
 import { parse } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { sanitizeTeamName } from '../helpers/sanitize-team-name'
-import type { Game, RoundData, Rounds } from './types.ts'
+import type { Game, RoundData, Rounds } from './types'
 import { BASE_URL, MPL_ID } from './urls'
 
 const getCheerio = async (round?: number): Promise<cheerio.CheerioAPI> => {
