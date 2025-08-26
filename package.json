@@ -1,7 +1,8 @@
 {
 	"type": "module",
 	"scripts": {
-		"build": "tsc"
+		"build": "bun scripts/build.ts",
+		"runtime": "bun-vercel ./scripts/webhook.ts"
 	},
 	"devDependencies": {
 		"@types/node": "^24.3.0",
@@ -13,6 +14,7 @@
 		"@grammyjs/storage-free": "^2.5.1",
 		"@supabase/supabase-js": "^2.56.0",
 		"axios": "^1.11.0",
+		"bun-vercel": "^1.0.0-alpha.5",
 		"cheerio": "^1.1.2",
 		"date-fns": "^4.1.0",
 		"dotenv": "^17.2.1",

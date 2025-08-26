@@ -24,10 +24,11 @@ import getData from './lib/harvest-data'
 import { logosMap } from './lib/logos-by-id'
 import { getLeaderboard, getPredictionsByUser } from './lib/supabase-client'
 import type { Game } from './lib/types'
-import { bot } from '../api/webhook'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
+
+export const bot = new Bot<MyContext>(token)
 
 const games = await getData()
 

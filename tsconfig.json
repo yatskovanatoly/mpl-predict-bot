@@ -2,9 +2,8 @@
 	// Visit https://aka.ms/tsconfig to read more about this file
 	"compilerOptions": {
 		// File Layout
-		"rootDirs": ["api", "src"],
-		"outDir": "./build",
-
+		// "rootDirs": ".",
+		// "outDir": "./build",
 		// Environment Settings
 		// See also https://aka.ms/tsconfig/module
 		"module": "es2022",
