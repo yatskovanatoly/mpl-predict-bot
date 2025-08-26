@@ -1,1 +1,0 @@
-{"version":3,"file":"parse-score.js","sourceRoot":"","sources":["../../api/helpers/parse-score.ts"],"names":[],"mappings":"AAAA,MAAM,UAAU,aAAa,CAAC,GAAW;IACxC,OAAO,GAAG;SACR,IAAI,EAAE;SACN,OAAO,CAAC,SAAS,EAAE,GAAG,CAAC,CAAC,0CAA0C;SAClE,OAAO,CAAC,QAAQ,EAAE,EAAE,CAAC,CAAA,CAAC,sCAAsC;AAC/D,CAAC"}
