@@ -2,28 +2,27 @@ import { I18n, type I18nFlavor } from '@grammyjs/i18n'
 import { PostgrestError } from '@supabase/supabase-js'
 import { differenceInDays } from 'date-fns'
 import {
-	Bot,
-	Context,
-	InlineKeyboard,
-	InputFile,
-	MemorySessionStorage,
-	session,
-	webhookCallback,
-	type SessionFlavor,
+  Bot,
+  Context,
+  InlineKeyboard,
+  InputFile,
+  MemorySessionStorage,
+  session,
+  type SessionFlavor
 } from 'grammy'
+import { saveUserPrediction } from './bot/save-prediction'
+import { userPredictionIteratee } from './bot/user-prediction-iteratee'
 import {
-	buildMainMenu,
-	buildMenuButton,
-	buildRoundMenu,
+  buildMainMenu,
+  buildMenuButton,
+  buildRoundMenu,
 } from './helpers/build-menus'
 import { editHelper } from './helpers/edit-helper'
 import { parseGameId } from './helpers/parse-game-id'
 import { sanitizeScore } from './helpers/parse-score'
-import { saveUserPrediction } from './bot/save-prediction'
-import { userPredictionIteratee } from './bot/user-prediction-iteratee'
-import { getLeaderboard, getPredictionsByUser } from './lib/supabase-client'
 import getData from './lib/harvest-data'
 import { logosMap } from './lib/logos-by-id'
+import { getLeaderboard, getPredictionsByUser } from './lib/supabase-client'
 import type { Game } from './lib/types'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
@@ -33,7 +32,7 @@ const games = await getData()
 
 const i18n = new I18n<MyContext>({
 	defaultLocale: 'ru',
-	directory: 'api/locales',
+	directory: 'src/locales',
 })
 
 const roundMenu = new InlineKeyboard()
