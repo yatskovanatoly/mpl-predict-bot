@@ -139,7 +139,7 @@ bot.on('callback_query:data', async (ctx: any) => {
 	if (data === 'leaderboard') {
 		try {
 			const leaderboard = await getLeaderboard()
-			if (!leaderboard || !!leaderboard.length) {
+			if (!leaderboard || !leaderboard.length) {
 				await ctx.reply(ctx.t('leaderboard_empty'), {
 					reply_markup: buildMenuButton(ctx),
 				})
