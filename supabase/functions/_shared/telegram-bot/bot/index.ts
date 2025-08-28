@@ -212,31 +212,36 @@ bot.on('message:text', async (ctx: any) => {
 		const [homeGoals, awayGoals] = score.split('-')
 		const { home, away, round, game_id } = ctx.session.game
 		try {
-			await saveUserPrediction(game_id, ctx, home, away, score, round).then(
-				async () => {
-					await ctx.reply(
-						ctx.t('prediction_made', {
-							n: '\n\n',
-							home,
-							away,
-							homeGoals,
-							awayGoals,
-						}),
-						{ parse_mode: 'MarkdownV2' }
-					)
-					const predicted = await getPredictionsByUser(ctx.from.id, round).then(
-						(data: any) => data.map((p: any) => p.game_id)
-					)
-					await ctx.reply(ctx.t('match_select'), {
-						reply_markup: buildRoundMenu(ctx, games, predicted),
-					})
-				}
-			)
-			return (ctx.session.game = undefined)
+			return await saveUserPrediction(
+				game_id,
+				ctx,
+				home,
+				away,
+				score,
+				round
+			).then(async () => {
+				await ctx.reply(
+					ctx.t('prediction_made', {
+						n: '\n\n',
+						home,
+						away,
+						homeGoals,
+						awayGoals,
+					}),
+					{ parse_mode: 'MarkdownV2' }
+				)
+				const predicted = await getPredictionsByUser(ctx.from.id, round).then(
+					(data: any) => data.map((p: any) => p.game_id)
+				)
+				await ctx.reply(ctx.t('match_select'), {
+          reply_markup: buildRoundMenu(ctx, games, predicted),
+				})
+        ctx.session.game = undefined
+			})
 		} catch (err) {
 			console.error(err)
 			const errMessage = err as PostgrestError
-			await ctx.reply(
+			return await ctx.reply(
 				ctx.t('prediction_fail', {
 					err: errMessage.message,
 				}),
