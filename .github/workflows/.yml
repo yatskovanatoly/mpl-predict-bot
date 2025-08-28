@@ -1,0 +1,2 @@
+- name: Supabase CLI Action
+  uses: supabase/setup-cli@v1.6.0
