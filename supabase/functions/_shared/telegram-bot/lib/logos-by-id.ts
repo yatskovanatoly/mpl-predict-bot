@@ -103,6 +103,7 @@ const logos = [
 		size: 39852,
 		uploadedAt: '2025-08-26T17:14:53.000Z',
 	},
+	{ name: 'beamish', url: 'https://mychamp.ru/system/clubs/2186/large.jpg' },
 ]
 
 const getPath = (team: string) =>
@@ -122,4 +123,5 @@ export const logosMap: Record<string, string> = {
 	'40343': getPath('sd'),
 	'29818': getPath('kleschi'),
 	'5326': getPath('vp'),
+	'2186': getPath('beamish'),
 }

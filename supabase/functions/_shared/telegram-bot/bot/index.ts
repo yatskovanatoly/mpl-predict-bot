@@ -28,6 +28,7 @@ import { Game } from '../lib/types.ts'
 import ru from '../locales/ru.ts'
 import { saveUserPrediction } from './save-prediction.ts'
 import { userPredictionIteratee } from './user-prediction-iteratee.ts'
+import { FALLBACK_IMG } from '../lib/urls.ts'
 
 const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -131,12 +132,12 @@ bot.on('callback_query:data', async (ctx: any) => {
 			await ctx.replyWithMediaGroup([
 				{
 					type: 'photo',
-					media: logosMap[game.home_id],
+					media: logosMap[game.home_id] || FALLBACK_IMG,
 					caption: `${ctx.t('match')} ${game?.home} - ${game?.away}?`,
 				},
 				{
 					type: 'photo',
-					media: logosMap[game.away_id],
+					media: logosMap[game.away_id] || FALLBACK_IMG,
 				},
 			])
 	}

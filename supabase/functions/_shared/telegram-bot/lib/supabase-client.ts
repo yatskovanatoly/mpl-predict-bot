@@ -6,7 +6,7 @@ export async function getCurrentRound(): Promise<Game[]> {
 	const { data, error } = await supabase
 		.from('current_round')
 		.select('*')
-		.order('time', { ascending: false })
+		.order('time')
 	if (error) throw error
 	return data
 }
