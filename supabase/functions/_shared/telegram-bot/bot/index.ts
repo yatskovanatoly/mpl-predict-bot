@@ -1,4 +1,3 @@
-// import { freeStorage } from '@grammyjs/storage-free'
 import {
 	Bot,
 	Context,
@@ -21,7 +20,7 @@ import { parseGameId } from '../helpers/parse-game-id.ts'
 import { sanitizeScore } from '../helpers/parse-score.ts'
 import { logosMap } from '../lib/logos-by-id.ts'
 import {
-	getGames,
+	getCurrentRound,
 	getLeaderboard,
 	getPredictionsByUser,
 } from '../lib/supabase-client.ts'
@@ -41,7 +40,7 @@ if (!supabaseKey) throw new Error('db key is missing')
 export const bot = new Bot<MyContext>(token)
 export const supabase = createClient(supabaseUrl, supabaseKey) as any
 
-const games = await getGames()
+const games = await getCurrentRound()
 
 const i18n = new I18n<any>({
 	defaultLocale: 'ru',
@@ -63,7 +62,7 @@ bot.command('start', async (ctx: any) => {
 })
 
 bot.callbackQuery('predict', async (ctx: any) => {
-	if (!games || differenceInDays(games[0].date, new Date()) > 30) {
+	if (!games || differenceInDays(new Date(games[0].date), new Date()) > 30) {
 		return ctx.editMessageText(ctx.t('no_upcoming_games'), {
 			reply_markup: buildMenuButton(ctx),
 		})
@@ -146,7 +145,7 @@ bot.on('callback_query:data', async (ctx: any) => {
 		try {
 			const leaderboard = await getLeaderboard()
 			if (!leaderboard || !leaderboard.length) {
-				await ctx.reply(ctx.t('leaderboard_empty'), {
+				await ctx.editMessageText(ctx.t('leaderboard_empty'), {
 					reply_markup: buildMenuButton(ctx),
 				})
 				return
