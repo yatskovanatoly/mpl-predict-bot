@@ -15,7 +15,8 @@ export const getRoundGames = (html: string) => {
 		away_id: string
 		away_name: string
 		away_logo: string
-		score: string
+		home_goals: number | undefined
+		away_goals: number | undefined
 		events_url: string
 		round: number
 	}[] = []
@@ -50,7 +51,10 @@ export const getRoundGames = (html: string) => {
 				away_id: row.querySelector('td.away')?.getAttribute('name') ?? '',
 				away_name: awayEl?.textContent.trim() ?? '',
 				away_logo: awayImg?.getAttribute('src') ?? '',
-				score: scoreEl?.textContent.trim() ?? '',
+				home_goals:
+					Number(scoreEl?.textContent.trim().split(':')[0]) ?? undefined,
+				away_goals:
+					Number(scoreEl?.textContent.trim().split(':')[1]) ?? undefined,
 				events_url: scoreEl?.getAttribute('href') ?? '',
 				round,
 			})
