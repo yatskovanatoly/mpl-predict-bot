@@ -2,11 +2,11 @@ import type { User } from 'npm:@grammyjs/types'
 import { supabase } from '../bot/index.ts'
 import { Game } from './types.ts'
 
-export async function getGames(): Promise<Game[]> {
+export async function getCurrentRound(): Promise<Game[]> {
 	const { data, error } = await supabase
 		.from('current_round')
 		.select('*')
-		.order('round', { ascending: false })
+		.order('time', { ascending: false })
 	if (error) throw error
 	return data
 }
@@ -29,29 +29,6 @@ export async function getUserById(
 		.select('*')
 		.eq('id', userId)
 		.maybeSingle()
-	if (error) throw error
-	return data
-}
-
-export async function updateScore(
-	userId: string,
-	delta: number
-): Promise<LeaderboardRow> {
-	const { data: user, error: fetchError } = await supabase
-		.from('leaderboard')
-		.select('score')
-		.eq('id', userId)
-		.single()
-	if (fetchError) throw fetchError
-
-	const newScore = (user?.score ?? 0) + delta
-
-	const { data, error } = await supabase
-		.from('leaderboard')
-		.update({ score: newScore })
-		.eq('id', userId)
-		.select()
-		.single()
 	if (error) throw error
 	return data
 }
