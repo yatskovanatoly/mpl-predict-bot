@@ -13,6 +13,6 @@
 		}
 	},
 	"tasks": {
-		"dev": "deno --allow-import --allow-env --allow-net --env=../.env ./functions/_shared/telegram-bot/bot/index.ts"
+		"dev": "deno -EIN --env=.env ./functions/_shared/telegram-bot/bot/index.ts"
 	}
 }
