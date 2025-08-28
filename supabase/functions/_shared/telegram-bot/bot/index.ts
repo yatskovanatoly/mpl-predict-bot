@@ -25,12 +25,12 @@ import {
 	getPredictionsByUser,
 } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
+import { FALLBACK_IMG } from '../lib/urls.ts'
 import ru from '../locales/ru.ts'
 import { saveUserPrediction } from './save-prediction.ts'
 import { userPredictionIteratee } from './user-prediction-iteratee.ts'
-import { FALLBACK_IMG } from '../lib/urls.ts'
 
-const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
+const token = Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
 const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
 
@@ -63,6 +63,8 @@ bot.command('start', async (ctx: any) => {
 })
 
 bot.callbackQuery('predict', async (ctx: any) => {
+	const isPastMatchDay = new Date(games[0].date) <= new Date()
+
 	if (!games || differenceInDays(new Date(games[0].date), new Date()) > 30) {
 		return ctx.editMessageText(ctx.t('no_upcoming_games'), {
 			reply_markup: buildMenuButton(ctx),
@@ -73,6 +75,12 @@ bot.callbackQuery('predict', async (ctx: any) => {
 		ctx.from.id,
 		games[0].round
 	)
+
+	if (isPastMatchDay && !usersPredictions) {
+		return ctx.editMessageText(ctx.t('prediction_closed'), {
+			reply_markup: buildMenuButton(ctx),
+		})
+	}
 
 	const gamesWithPrediction: Game[] = []
 	const gamesWithoutPrediction: Game[] = []
@@ -102,14 +110,18 @@ bot.callbackQuery('predict', async (ctx: any) => {
 			`${
 				usersPredictions.length ? ctx.t('predicted', { n: games[0].round }) : ''
 			}\n\n${usersPredictions.map(userPredictionIteratee).join('\n')}\n\n${
-				gamesWithoutPrediction.length ? ctx.t('match_select') : ''
+				gamesWithoutPrediction.length && !isPastMatchDay
+					? ctx.t('match_select')
+					: ctx.t('prediction_closed')
 			}`,
 			{
-				reply_markup: buildRoundMenu(
-					ctx,
-					games,
-					usersPredictions.map((p: any) => p.game_id)
-				),
+				reply_markup: !isPastMatchDay
+					? buildRoundMenu(
+							ctx,
+							games,
+							usersPredictions.map((p: any) => p.game_id)
+					  )
+					: buildMenuButton(ctx),
 			}
 		)
 	} catch (err) {
@@ -200,31 +212,26 @@ bot.on('message:text', async (ctx: any) => {
 		const [homeGoals, awayGoals] = score.split('-')
 		const { home, away, round, game_id } = ctx.session.game
 		try {
-			await saveUserPrediction(
-				game_id,
-				ctx,
-				home.team!,
-				away.team!,
-				score,
-				round
-			).then(async () => {
-				await ctx.reply(
-					ctx.t('prediction_made', {
-						n: '\n\n',
-						home: home.team,
-						away: away.team,
-						homeGoals: homeGoals!,
-						awayGoals: awayGoals!,
-					}),
-					{ parse_mode: 'MarkdownV2' }
-				)
-				const predicted = await getPredictionsByUser(ctx.from.id, round).then(
-					(data: any) => data.map((p: any) => p.game_id)
-				)
-				await ctx.reply(ctx.t('match_select'), {
-					reply_markup: buildRoundMenu(ctx, games, predicted),
-				})
-			})
+			await saveUserPrediction(game_id, ctx, home, away, score, round).then(
+				async () => {
+					await ctx.reply(
+						ctx.t('prediction_made', {
+							n: '\n\n',
+							home,
+							away,
+							homeGoals,
+							awayGoals,
+						}),
+						{ parse_mode: 'MarkdownV2' }
+					)
+					const predicted = await getPredictionsByUser(ctx.from.id, round).then(
+						(data: any) => data.map((p: any) => p.game_id)
+					)
+					await ctx.reply(ctx.t('match_select'), {
+						reply_markup: buildRoundMenu(ctx, games, predicted),
+					})
+				}
+			)
 			return (ctx.session.game = undefined)
 		} catch (err) {
 			console.error(err)
@@ -242,6 +249,8 @@ bot.on('message:text', async (ctx: any) => {
 
 	await ctx.reply(ctx.t('fallback'))
 })
+
+bot.start()
 
 export type SessionData = {
 	game: Game | undefined
