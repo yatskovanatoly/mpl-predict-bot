@@ -1,7 +1,7 @@
 import type { User } from 'npm:@grammyjs/types'
 import { supabase } from '../bot/index.ts'
+import { Database } from '../database.types.ts'
 import { Game } from './types.ts'
-import { Database } from "../database.types.ts";
 
 export async function getCurrentRound(): Promise<Game[]> {
 	const { data, error } = await supabase
@@ -17,6 +17,7 @@ export async function getLeaderboard(): Promise<LeaderboardRow[]> {
 		.from('leaderboard')
 		.select('*')
 		.gt('points', 0)
+		.limit(10)
 		.order('points', { ascending: false })
 	if (error) throw error
 	return data
@@ -106,5 +107,5 @@ export type PredictionRow = {
 	created_on: string
 	game_id: number
 	round: number
-  status: Database['public']['Tables']['predictions']['Row']['status']
+	status: Database['public']['Tables']['predictions']['Row']['status']
 }

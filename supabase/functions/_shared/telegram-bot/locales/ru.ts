@@ -7,6 +7,12 @@ leaderboard = 📊 таблица лидеров
 match_select = выбери матч:
 match = какой счёт будет в матче
 leaderboard_view = 📊 таблица лидеров:
+points = {
+  $pts ->
+    [one] {$pts} очко 
+    [few] {$pts} очка 
+    *[many] {$pts} очков
+    }
 prediction_made = ✅ прогноз сделан\\! {$n}*{$home}* – *{$away}* → {$homeGoals}:{$awayGoals}
 prediction_fail = ❌ не удалось сделать прогноз. Ошибка: <blockquote expandable><code>{$err}</code></blockquote>
 leaderboard_empty = здесь пока никого нет

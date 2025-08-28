@@ -1,29 +1,28 @@
 import {
-	Bot,
-	Context,
-	InlineKeyboard,
-	session,
-	SessionFlavor,
+  Bot,
+  Context,
+  InlineKeyboard,
+  session,
+  SessionFlavor,
 } from 'https://deno.land/x/grammy@v1.38.1/mod.ts'
 import { differenceInDays } from 'jsr:@mary/date-fns'
 import { PostgrestError } from 'jsr:@supabase/supabase-js'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n'
 import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
-import { Database } from '../database.types.ts'
 import {
-	buildMainMenu,
-	buildMenuButton,
-	buildRoundMenu,
+  buildMainMenu,
+  buildMenuButton,
+  buildRoundMenu,
 } from '../helpers/build-menus.ts'
 import { editHelper } from '../helpers/edit-helper.ts'
 import { parseGameId } from '../helpers/parse-game-id.ts'
 import { sanitizeScore } from '../helpers/parse-score.ts'
 import { logosMap } from '../lib/logos-by-id.ts'
 import {
-	getCurrentRound,
-	getLeaderboard,
-	getPredictionsByUser,
+  getCurrentRound,
+  getLeaderboard,
+  getPredictionsByUser,
 } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
 import { FALLBACK_IMG } from '../lib/urls.ts'
@@ -40,7 +39,7 @@ if (!supabaseUrl) throw new Error('db url is missing')
 if (!supabaseKey) throw new Error('db key is missing')
 
 export const bot = new Bot<MyContext>(token)
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey) as any
+export const supabase = createClient(supabaseUrl, supabaseKey)
 
 const games = await getCurrentRound()
 
@@ -55,7 +54,10 @@ const roundMenu = new InlineKeyboard()
 bot.use(i18n).use(
 	session({
 		initial: (): SessionData => ({ game: undefined }),
-		storage: supabaseAdapter<SessionData>({ supabase, table: 'memory' }),
+		storage: supabaseAdapter<SessionData>({
+			supabase: supabase as any,
+			table: 'memory',
+		}),
 	})
 )
 
@@ -172,7 +174,9 @@ bot.on('callback_query:data', async (ctx: any) => {
 
 			let table = `${ctx.t('leaderboard_view')}\n\n`
 			leaderboard.forEach((p: any, i: any) => {
-				table += `${i + 1}. ${p.username} — ${p.points} pts\n`
+				table += `${i + 1}. @${p.username} — ${ctx.t('points', {
+					pts: p.points,
+				})}\n`
 			})
 
 			await editHelper(
