@@ -1,6 +1,7 @@
 import type { User } from 'npm:@grammyjs/types'
 import { supabase } from '../bot/index.ts'
 import { Game } from './types.ts'
+import { Database } from "../database.types.ts";
 
 export async function getCurrentRound(): Promise<Game[]> {
 	const { data, error } = await supabase
@@ -105,4 +106,5 @@ export type PredictionRow = {
 	created_on: string
 	game_id: number
 	round: number
+  status: Database['public']['Tables']['predictions']['Row']['status']
 }

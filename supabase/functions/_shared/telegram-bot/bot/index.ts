@@ -10,6 +10,7 @@ import { PostgrestError } from 'jsr:@supabase/supabase-js'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n'
 import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
+import { Database } from '../database.types.ts'
 import {
 	buildMainMenu,
 	buildMenuButton,
@@ -39,7 +40,7 @@ if (!supabaseUrl) throw new Error('db url is missing')
 if (!supabaseKey) throw new Error('db key is missing')
 
 export const bot = new Bot<MyContext>(token)
-export const supabase = createClient(supabaseUrl, supabaseKey) as any
+export const supabase = createClient<Database>(supabaseUrl, supabaseKey) as any
 
 const games = await getCurrentRound()
 
@@ -103,27 +104,32 @@ bot.callbackQuery('predict', async (ctx: any) => {
 
 	roundMenu.text(ctx.t('menu'), 'menu')
 
-	await ctx.answerCallbackQuery()
+	const hasPredictions = usersPredictions.length > 0
+	const roundNumber = games[0].round
+	const predictionsList = usersPredictions
+		.map(userPredictionIteratee)
+		.join('\n')
 
+	const header = hasPredictions ? ctx.t('predicted', { n: roundNumber }) : ''
+	const body = predictionsList
+	const footer =
+		gamesWithoutPrediction.length && !isPastMatchDay
+			? ctx.t('match_select')
+			: ctx.t('prediction_closed')
+
+	const text = `${header}\n\n${body}\n\n${footer}`
+
+	const replyMarkup = !isPastMatchDay
+		? buildRoundMenu(
+				ctx,
+				games,
+				usersPredictions.map((p: any) => p.game_id)
+		  )
+		: buildMenuButton(ctx)
+
+	await ctx.answerCallbackQuery()
 	try {
-		await ctx.editMessageText(
-			`${
-				usersPredictions.length ? ctx.t('predicted', { n: games[0].round }) : ''
-			}\n\n${usersPredictions.map(userPredictionIteratee).join('\n')}\n\n${
-				gamesWithoutPrediction.length && !isPastMatchDay
-					? ctx.t('match_select')
-					: ctx.t('prediction_closed')
-			}`,
-			{
-				reply_markup: !isPastMatchDay
-					? buildRoundMenu(
-							ctx,
-							games,
-							usersPredictions.map((p: any) => p.game_id)
-					  )
-					: buildMenuButton(ctx),
-			}
-		)
+		await ctx.editMessageText(text, { reply_markup: replyMarkup })
 	} catch (err) {
 		console.log(err)
 		ctx.reply(JSON.stringify(err))
@@ -234,9 +240,9 @@ bot.on('message:text', async (ctx: any) => {
 					(data: any) => data.map((p: any) => p.game_id)
 				)
 				await ctx.reply(ctx.t('match_select'), {
-          reply_markup: buildRoundMenu(ctx, games, predicted),
+					reply_markup: buildRoundMenu(ctx, games, predicted),
 				})
-        ctx.session.game = undefined
+				ctx.session.game = undefined
 			})
 		} catch (err) {
 			console.error(err)
