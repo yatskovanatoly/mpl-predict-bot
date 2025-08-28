@@ -1,11 +1,21 @@
 import type { User } from 'npm:@grammyjs/types'
 import { supabase } from '../bot/index.ts'
+import { Game } from './types.ts'
+
+export async function getGames(): Promise<Game[]> {
+	const { data, error } = await supabase
+		.from('current_round')
+		.select('*')
+		.order('round', { ascending: false })
+	if (error) throw error
+	return data
+}
 
 export async function getLeaderboard(): Promise<LeaderboardRow[]> {
 	const { data, error } = await supabase
 		.from('leaderboard')
 		.select('*')
-    .gt('points', 0)
+		.gt('points', 0)
 		.order('points', { ascending: false })
 	if (error) throw error
 	return data

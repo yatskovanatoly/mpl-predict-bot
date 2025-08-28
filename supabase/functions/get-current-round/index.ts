@@ -1,21 +1,14 @@
+import { Document, DOMParser } from 'jsr:@b-fuze/deno-dom'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { parse } from 'npm:date-fns'
 import { ru } from 'npm:date-fns/locale'
-import { sanitizeTeamName } from '../helpers/sanitize-team-name.ts'
-import type { Game, RoundData, Rounds } from './types.ts'
-import { BASE_URL, MPL_ID } from './urls.ts'
-import { Document, DOMParser } from 'jsr:@b-fuze/deno-dom'
+import { sanitizeTeamName } from '../_shared/telegram-bot/helpers/sanitize-team-name.ts'
+import { Game, RoundData } from '../_shared/telegram-bot/lib/types.ts'
+import { BASE_URL, MPL_ID } from '../_shared/telegram-bot/lib/urls.ts'
 
-const getDocument = async (round?: number): Promise<Document> => {
+const getDocument = async (): Promise<Document> => {
 	const response = await fetch(
-		`https://${BASE_URL}/championships/${MPL_ID}/games` +
-			(round ? `?round=${round.toString()}` : ''),
-		{
-			headers: {
-				'Cache-Control': 'no-cache',
-				Pragma: 'no-cache',
-				Expires: '0',
-			},
-		}
+		`https://${BASE_URL}/championships/${MPL_ID}/games`
 	)
 	const html = await response.text()
 	const doc = new DOMParser().parseFromString(html, 'text/html')
@@ -23,9 +16,9 @@ const getDocument = async (round?: number): Promise<Document> => {
 	return doc
 }
 
-const getData = async (roundN?: number): Promise<RoundData> => {
+const getCurrentRound = async (): Promise<RoundData> => {
 	const games: Game[] = []
-	const doc = await getDocument(roundN)
+	const doc = await getDocument()
 
 	const date = doc.querySelector('.category2')?.textContent.trim() ?? ''
 	const round = Number(doc.querySelector('.current')?.textContent ?? '0')
@@ -47,10 +40,13 @@ const getData = async (roundN?: number): Promise<RoundData> => {
 			const game: Game = {
 				id,
 				round,
-				home: { id: '', team: '', logo: undefined },
-				away: { id: '', team: '', logo: undefined },
+				home_id: '',
+				home: '',
+				home_logo: undefined,
+				away_id: '',
+				away: '',
+				away_logo: undefined,
 				score: '',
-				game_id: 0,
 				date: parsedRoundDate,
 			}
 
@@ -63,13 +59,20 @@ const getData = async (roundN?: number): Promise<RoundData> => {
 				const className = child.getAttribute('class')?.split(' ').at(-1)
 
 				if (className === 'home' || className === 'away') {
-					const id =
+					const teamId =
 						child.querySelector('a')?.getAttribute('href')?.split('/').at(-1) ??
 						''
-					game[className] = {
-						id,
-						team: sanitizeTeamName(child.textContent ?? '').trim(),
-						logo: imgUrl ?? '',
+					const teamName = sanitizeTeamName(child.textContent ?? '').trim()
+					const teamLogo = imgUrl ?? ''
+
+					if (className === 'home') {
+						game.home_id = teamId
+						game.home = teamName
+						game.home_logo = teamLogo
+					} else {
+						game.away_id = teamId
+						game.away = teamName
+						game.away_logo = teamLogo
 					}
 				} else if (className === 'score') {
 					game.score = child.textContent?.trim() ?? ''
@@ -82,28 +85,44 @@ const getData = async (roundN?: number): Promise<RoundData> => {
 		console.error('getData error:', e)
 	}
 
-	return { date: parsedRoundDate, games, round }
+	return games
 }
 
-export const getRounds = async (round?: number): Promise<Rounds> => {
-	const rounds: string[] = []
-	let currentRound: string | undefined
-	const doc = await getDocument(round)
+Deno.serve(async () => {
+	const games = await getCurrentRound()
 
-	try {
-		doc
-			.querySelectorAll('.ruler_selector a, .ruler_selector .current')
-			.forEach((el) => {
-				rounds.push(el.textContent?.trim() ?? '')
-			})
-		const current = doc.querySelector('.ruler_selector .current')
-		if (current) {
-			currentRound = current.textContent?.trim()
-		}
-	} catch (e) {
-		console.error('getRounds error:', e)
+	const supabase = createClient(
+		Deno.env.get('SUPABASE_URL') ?? '',
+		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+	)
+
+	const { data, error } = await supabase
+		.from('current_round')
+		.upsert(games, {
+			onConflict: 'id',
+		})
+		.select()
+	if (error) {
+		return new Response(
+			JSON.stringify({
+				error: error.message,
+			}),
+			{
+				status: 500,
+				headers,
+			}
+		)
 	}
-	return { rounds, currentRound }
-}
+	return new Response(
+		JSON.stringify({
+			inserted: data?.length ?? 0,
+		}),
+		{
+			headers,
+		}
+	)
+})
 
-export default getData
+const headers = {
+	'Content-Type': 'application/json',
+}

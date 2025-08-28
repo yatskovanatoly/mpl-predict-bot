@@ -1,8 +1,4 @@
-export type RoundData = {
-	date: Date
-	games: Game[]
-	round: number
-}
+export type RoundData = Game[]
 
 export type Team = {
 	id: string
@@ -12,11 +8,14 @@ export type Team = {
 
 export type Game = {
 	id: number
-	home: Team
-	away: Team
+	home_id: Team['id']
+	away_id: Team['id']
+	home_logo: Team['logo']
+	away_logo: Team['logo']
+	home: Team['team']
+	away: Team['team']
 	score: string
 	time?: string | undefined
-	game_id: number
 	round: number
 	date: Date
 }

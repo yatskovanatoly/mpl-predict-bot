@@ -3,11 +3,14 @@ import {
 	Bot,
 	Context,
 	InlineKeyboard,
+	session,
 	SessionFlavor,
 } from 'https://deno.land/x/grammy@v1.38.1/mod.ts'
 import { differenceInDays } from 'jsr:@mary/date-fns'
 import { PostgrestError } from 'jsr:@supabase/supabase-js'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n'
+import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
 import {
 	buildMainMenu,
 	buildMenuButton,
@@ -16,16 +19,16 @@ import {
 import { editHelper } from '../helpers/edit-helper.ts'
 import { parseGameId } from '../helpers/parse-game-id.ts'
 import { sanitizeScore } from '../helpers/parse-score.ts'
-import getData from '../lib/harvest-data.ts'
 import { logosMap } from '../lib/logos-by-id.ts'
-import { getLeaderboard, getPredictionsByUser } from '../lib/supabase-client.ts'
+import {
+	getGames,
+	getLeaderboard,
+	getPredictionsByUser,
+} from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
 import ru from '../locales/ru.ts'
 import { saveUserPrediction } from './save-prediction.ts'
 import { userPredictionIteratee } from './user-prediction-iteratee.ts'
-import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { session } from 'https://deno.land/x/grammy@v1.38.1/mod.ts'
-import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
 
 const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -38,7 +41,7 @@ if (!supabaseKey) throw new Error('db key is missing')
 export const bot = new Bot<MyContext>(token)
 export const supabase = createClient(supabaseUrl, supabaseKey) as any
 
-const games = await getData()
+const games = await getGames()
 
 const i18n = new I18n<any>({
 	defaultLocale: 'ru',
@@ -60,18 +63,21 @@ bot.command('start', async (ctx: any) => {
 })
 
 bot.callbackQuery('predict', async (ctx: any) => {
-	if (!games || differenceInDays(games.date, new Date()) > 30) {
+	if (!games || differenceInDays(games[0].date, new Date()) > 30) {
 		return ctx.editMessageText(ctx.t('no_upcoming_games'), {
 			reply_markup: buildMenuButton(ctx),
 		})
 	}
 
-	const usersPredictions = await getPredictionsByUser(ctx.from.id, games.round)
+	const usersPredictions = await getPredictionsByUser(
+		ctx.from.id,
+		games[0].round
+	)
 
 	const gamesWithPrediction: Game[] = []
 	const gamesWithoutPrediction: Game[] = []
 
-	games.games.forEach((game: Game) => {
+	games.forEach((game: Game) => {
 		const hasPrediction = usersPredictions.some(
 			(p: any) => p.game_id === game.id
 		)
@@ -83,7 +89,7 @@ bot.callbackQuery('predict', async (ctx: any) => {
 	})
 
 	gamesWithoutPrediction.forEach(({ id, home, away }) => {
-		roundMenu.text(`${home.team} — ${away.team}`, `game_${id}`)
+		roundMenu.text(`${home} — ${away}`, `game_${id}`)
 		roundMenu.row()
 	})
 
@@ -94,14 +100,14 @@ bot.callbackQuery('predict', async (ctx: any) => {
 	try {
 		await ctx.editMessageText(
 			`${
-				usersPredictions.length ? ctx.t('predicted', { n: games.round }) : ''
+				usersPredictions.length ? ctx.t('predicted', { n: games[0].round }) : ''
 			}\n\n${usersPredictions.map(userPredictionIteratee).join('\n')}\n\n${
 				gamesWithoutPrediction.length ? ctx.t('match_select') : ''
 			}`,
 			{
 				reply_markup: buildRoundMenu(
 					ctx,
-					games.games,
+					games,
 					usersPredictions.map((p: any) => p.game_id)
 				),
 			}
@@ -118,7 +124,7 @@ bot.on('callback_query:data', async (ctx: any) => {
 	if (data.startsWith('game_')) {
 		await ctx.answerCallbackQuery()
 
-		const game = games.games.find((game: Game) => game.id === parseGameId(data))
+		const game = games.find((game: Game) => game.id === parseGameId(data))
 
 		ctx.session.game = game
 
@@ -126,12 +132,12 @@ bot.on('callback_query:data', async (ctx: any) => {
 			await ctx.replyWithMediaGroup([
 				{
 					type: 'photo',
-					media: logosMap[game.home.id],
-					caption: `${ctx.t('match')} ${game?.home.team} - ${game?.away.team}?`,
+					media: logosMap[game.home_id],
+					caption: `${ctx.t('match')} ${game?.home} - ${game?.away}?`,
 				},
 				{
 					type: 'photo',
-					media: logosMap[game.away.id],
+					media: logosMap[game.away_id],
 				},
 			])
 	}
@@ -177,7 +183,7 @@ bot.on('callback_query:data', async (ctx: any) => {
 	if (data === 'prev') {
 		const usersPredictions = await getPredictionsByUser(
 			ctx.from!.id,
-			games.round - 1
+			games[0].round - 1
 		)
 		ctx.editMessageText(
 			usersPredictions.map(userPredictionIteratee).join('\n'),
@@ -216,7 +222,7 @@ bot.on('message:text', async (ctx: any) => {
 					(data: any) => data.map((p: any) => p.game_id)
 				)
 				await ctx.reply(ctx.t('match_select'), {
-					reply_markup: buildRoundMenu(ctx, games.games, predicted),
+					reply_markup: buildRoundMenu(ctx, games, predicted),
 				})
 			})
 			return (ctx.session.game = undefined)
