@@ -11,4 +11,5 @@ jobs:
         with:
           version: latest
       - run: supabase init
-      - run: supabase db start
+      # - run: supabase db start
+      - run: supabase functions deploy --no-verify-jwt telegram-bot
