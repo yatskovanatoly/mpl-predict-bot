@@ -1,7 +1,14 @@
-steps:
-  - uses: supabase/setup-cli@v1
-    with:
-      version: latest
-  - run: supabase link --project-id $SUPABASE_PROJECT_ID
-  - run: supabase db push
-  - run: supabase deploy functions
+name: Supabase Deploy
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase init
+      - run: supabase db start
