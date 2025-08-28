@@ -7,9 +7,9 @@ export async function buildMainMenu(ctx: MyContext, games: Game[]) {
 	const kb = new InlineKeyboard()
 	kb.text(ctx.t('predict'), 'predict').row()
 
-	const prevRound = games[0].round - 0
+	const prevRound = games[0].round - 1
 
-	if (games[0].round > 0) {
+	if (games[0].round > 1) {
 		const usersPredictions = await getPredictionsByUser(ctx.from!.id, prevRound)
 
 		if (usersPredictions.length)
