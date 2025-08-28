@@ -79,7 +79,7 @@ bot.callbackQuery('predict', async (ctx: any) => {
 
 	games.forEach((game: Game) => {
 		const hasPrediction = usersPredictions.some(
-			(p: any) => p.game_id === game.id
+			(p: any) => p.game_id === game.game_id
 		)
 		if (hasPrediction) {
 			gamesWithPrediction.push(game)
@@ -88,8 +88,8 @@ bot.callbackQuery('predict', async (ctx: any) => {
 		}
 	})
 
-	gamesWithoutPrediction.forEach(({ id, home, away }) => {
-		roundMenu.text(`${home} — ${away}`, `game_${id}`)
+	gamesWithoutPrediction.forEach(({ game_id, home, away }) => {
+		roundMenu.text(`${home} — ${away}`, `game_${game_id}`)
 		roundMenu.row()
 	})
 
@@ -124,7 +124,7 @@ bot.on('callback_query:data', async (ctx: any) => {
 	if (data.startsWith('game_')) {
 		await ctx.answerCallbackQuery()
 
-		const game = games.find((game: Game) => game.id === parseGameId(data))
+		const game = games.find((game: Game) => game.game_id === parseGameId(data))
 
 		ctx.session.game = game
 
@@ -198,10 +198,10 @@ bot.on('message:text', async (ctx: any) => {
 	if (ctx.session.game) {
 		const score = sanitizeScore(msg)
 		const [homeGoals, awayGoals] = score.split('-')
-		const { home, away, id, round } = ctx.session.game
+		const { home, away, round, game_id } = ctx.session.game
 		try {
 			await saveUserPrediction(
-				id,
+				game_id,
 				ctx,
 				home.team!,
 				away.team!,

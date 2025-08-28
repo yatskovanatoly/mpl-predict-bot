@@ -34,11 +34,11 @@ const getCurrentRound = async (): Promise<RoundData> => {
 
 			const idAttr = parent.getAttribute('id')
 			if (!idAttr) return
-			const id = Number(idAttr.replace('game_', ''))
+			const game_id = Number(idAttr.replace('game_', ''))
 			const time = parent.querySelector('.date')?.textContent.trim() ?? ''
 
 			const game: Game = {
-				id,
+				game_id,
 				round,
 				home_id: '',
 				home: '',
@@ -99,7 +99,7 @@ Deno.serve(async () => {
 	const { data, error } = await supabase
 		.from('current_round')
 		.upsert(games, {
-			onConflict: 'id',
+			onConflict: 'game_id',
 		})
 		.select()
 	if (error) {

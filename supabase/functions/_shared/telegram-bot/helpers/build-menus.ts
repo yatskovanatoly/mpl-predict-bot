@@ -28,9 +28,9 @@ export function buildRoundMenu(
 ) {
 	const kb = new InlineKeyboard()
 
-	games.forEach(({ id, home, away }) => {
-		if (!userPredictions.includes(id)) {
-			kb.text(`${home} — ${away}`, `game_${id}`).row()
+	games.forEach(({ game_id, home, away }) => {
+		if (!userPredictions.includes(game_id)) {
+			kb.text(`${home} — ${away}`, `game_${game_id}`).row()
 		}
 	})
 

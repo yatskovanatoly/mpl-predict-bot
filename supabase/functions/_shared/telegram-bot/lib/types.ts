@@ -7,7 +7,7 @@ export type Team = {
 }
 
 export type Game = {
-	id: number
+	game_id: number
 	home_id: Team['id']
 	away_id: Team['id']
 	home_logo: Team['logo']
