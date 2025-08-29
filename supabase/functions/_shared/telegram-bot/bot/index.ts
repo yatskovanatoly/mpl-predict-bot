@@ -1,28 +1,28 @@
 import {
-  Bot,
-  Context,
-  InlineKeyboard,
-  session,
-  SessionFlavor,
+	Bot,
+	Context,
+	InlineKeyboard,
+	session,
+	SessionFlavor,
 } from 'https://deno.land/x/grammy@v1.38.1/mod.ts'
-import { differenceInDays } from 'jsr:@mary/date-fns'
 import { PostgrestError } from 'jsr:@supabase/supabase-js'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n'
 import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
+import { addHours, differenceInDays } from 'npm:date-fns'
 import {
-  buildMainMenu,
-  buildMenuButton,
-  buildRoundMenu,
+	buildMainMenu,
+	buildMenuButton,
+	buildRoundMenu,
 } from '../helpers/build-menus.ts'
 import { editHelper } from '../helpers/edit-helper.ts'
 import { parseGameId } from '../helpers/parse-game-id.ts'
 import { sanitizeScore } from '../helpers/parse-score.ts'
 import { logosMap } from '../lib/logos-by-id.ts'
 import {
-  getCurrentRound,
-  getLeaderboard,
-  getPredictionsByUser,
+	getCurrentRound,
+	getLeaderboard,
+	getPredictionsByUser,
 } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
 import { FALLBACK_IMG } from '../lib/urls.ts'
@@ -30,7 +30,7 @@ import ru from '../locales/ru.ts'
 import { saveUserPrediction } from './save-prediction.ts'
 import { userPredictionIteratee } from './user-prediction-iteratee.ts'
 
-const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
+const token = Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
 const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
 
@@ -66,7 +66,7 @@ bot.command('start', async (ctx: any) => {
 })
 
 bot.callbackQuery('predict', async (ctx: any) => {
-	const isPastMatchDay = new Date(games[0].date) <= new Date()
+	const isPastMatchDay = new Date(games[0].date) <= addHours(new Date(), 3)
 
 	if (!games || differenceInDays(new Date(games[0].date), new Date()) > 30) {
 		return ctx.editMessageText(ctx.t('no_upcoming_games'), {
@@ -265,7 +265,7 @@ bot.on('message:text', async (ctx: any) => {
 	await ctx.reply(ctx.t('fallback'))
 })
 
-// bot.start()
+bot.start()
 
 export type SessionData = {
 	game: Game | undefined
