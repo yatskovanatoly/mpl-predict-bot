@@ -17,12 +17,13 @@ import {
 } from '../helpers/build-menus.ts'
 import { editHelper } from '../helpers/edit-helper.ts'
 import { parseGameId } from '../helpers/parse-game-id.ts'
-import { sanitizeScore } from '../helpers/parse-score.ts'
+import { parseScore } from '../helpers/parse-score.ts'
 import { logosMap } from '../lib/logos-by-id.ts'
 import {
 	getCurrentRound,
 	getLeaderboard,
 	getPredictionsByUser,
+	LeaderboardRow,
 } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
 import { FALLBACK_IMG } from '../lib/urls.ts'
@@ -62,11 +63,11 @@ bot.use(i18n).use(
 	})
 )
 
-bot.command('start', async (ctx: any) => {
+bot.command('start', async (ctx) => {
 	ctx.reply(ctx.t('start'), { reply_markup: await buildMainMenu(ctx, games) })
 })
 
-bot.callbackQuery('predict', async (ctx: any) => {
+bot.callbackQuery('predict', async (ctx) => {
 	const isPastMatchDay = new Date(games[0].date) <= addHours(new Date(), 3)
 
 	if (!games || differenceInDays(new Date(games[0].date), new Date()) > 30) {
@@ -91,7 +92,7 @@ bot.callbackQuery('predict', async (ctx: any) => {
 
 	games.forEach((game: Game) => {
 		const hasPrediction = usersPredictions.some(
-			(p: any) => p.game_id === game.game_id
+			(p) => p.game_id === game.game_id
 		)
 		if (hasPrediction) {
 			gamesWithPrediction.push(game)
@@ -126,7 +127,7 @@ bot.callbackQuery('predict', async (ctx: any) => {
 		? buildRoundMenu(
 				ctx,
 				games,
-				usersPredictions.map((p: any) => p.game_id)
+				usersPredictions.map((p) => p.game_id)
 		  )
 		: buildMenuButton(ctx)
 
@@ -139,7 +140,7 @@ bot.callbackQuery('predict', async (ctx: any) => {
 	}
 })
 
-bot.on('callback_query:data', async (ctx: any) => {
+bot.on('callback_query:data', async (ctx) => {
 	const data = ctx.callbackQuery.data
 
 	if (data.startsWith('game_')) {
@@ -174,7 +175,7 @@ bot.on('callback_query:data', async (ctx: any) => {
 			}
 
 			let table = `${ctx.t('leaderboard_view')}\n\n`
-			leaderboard.forEach((p: any, i: any) => {
+			leaderboard.forEach((p: LeaderboardRow, i) => {
 				table += `${i + 1}. @${p.username} — ${ctx.t('points', {
 					pts: p.points,
 				})}\n`
@@ -215,11 +216,11 @@ bot.on('callback_query:data', async (ctx: any) => {
 	}
 })
 
-bot.on('message:text', async (ctx: any) => {
+bot.on('message:text', async (ctx) => {
 	const msg = ctx.message.text.trim()
 
 	if (ctx.session.game) {
-		const score = sanitizeScore(msg)
+		const score = parseScore(msg)
 		const [homeGoals, awayGoals] = score.split('-')
 		const { home, away, round, game_id } = ctx.session.game
 		try {
@@ -242,7 +243,7 @@ bot.on('message:text', async (ctx: any) => {
 					{ parse_mode: 'MarkdownV2' }
 				)
 				const predicted = await getPredictionsByUser(ctx.from.id, round).then(
-					(data: any) => data.map((p: any) => p.game_id)
+					(data) => data.map((p) => p.game_id)
 				)
 				await ctx.reply(ctx.t('match_select'), {
 					reply_markup: buildRoundMenu(ctx, games, predicted),
