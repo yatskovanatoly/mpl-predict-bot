@@ -30,7 +30,8 @@ import ru from '../locales/ru.ts'
 import { saveUserPrediction } from './save-prediction.ts'
 import { userPredictionIteratee } from './user-prediction-iteratee.ts'
 
-const token = Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
+// const token = Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
+const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
 const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
 
@@ -265,7 +266,7 @@ bot.on('message:text', async (ctx: any) => {
 	await ctx.reply(ctx.t('fallback'))
 })
 
-bot.start()
+// bot.start()
 
 export type SessionData = {
 	game: Game | undefined
