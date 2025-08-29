@@ -116,10 +116,11 @@ bot.callbackQuery('predict', async (ctx) => {
 
 	const header = hasPredictions ? ctx.t('predicted', { n: roundNumber }) : ''
 	const body = predictionsList
-	const footer =
-		gamesWithoutPrediction.length && !isPastMatchDay
-			? ctx.t('match_select')
-			: ctx.t('prediction_closed')
+	const footer = isPastMatchDay
+		? ctx.t('prediction_closed')
+		: gamesWithoutPrediction.length
+		? ctx.t('match_select')
+		: ''
 
 	const text = `${header}\n\n${body}\n\n${footer}`
 
