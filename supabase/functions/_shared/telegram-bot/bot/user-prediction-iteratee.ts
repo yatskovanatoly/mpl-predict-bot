@@ -1,5 +1,5 @@
-import { Database } from '../database.types.ts'
 import { PredictionRow } from '../lib/supabase-client.ts'
+import { MyContext } from './index.ts'
 
 export const userPredictionIteratee = ({
 	home_team,
@@ -7,13 +7,9 @@ export const userPredictionIteratee = ({
 	home_goals,
 	away_goals,
 	status,
-}: PredictionRow) =>
+	game_result,
+	ctx,
+}: PredictionRow & { ctx: MyContext }) =>
 	`${home_team} – ${away_team} → ${home_goals}:${away_goals} ${
-		status ? statusMap[status] : ''
+		game_result && status ? `${ctx.t(status)} (${game_result})` : ''
 	}`
-
-const statusMap: Record<Database['public']['Enums']['status'], string> = {
-	score: '🎯',
-	difference: '⚖️',
-	winner: '🎲',
-}

@@ -107,5 +107,6 @@ export type PredictionRow = {
 	created_on: string
 	game_id: number
 	round: number
+	game_result: Database['public']['Tables']['predictions']['Row']['game_result']
 	status: Database['public']['Tables']['predictions']['Row']['status']
 }

@@ -154,10 +154,12 @@ export type Database = {
       }
       predictions: {
         Row: {
+          awarded: boolean
           away_goals: number | null
           away_team: string | null
           created_at: string
           game_id: number | null
+          game_result: string | null
           home_goals: number | null
           home_team: string | null
           id: string
@@ -167,10 +169,12 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          awarded?: boolean
           away_goals?: number | null
           away_team?: string | null
           created_at?: string
           game_id?: number | null
+          game_result?: string | null
           home_goals?: number | null
           home_team?: string | null
           id?: string
@@ -180,10 +184,12 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          awarded?: boolean
           away_goals?: number | null
           away_team?: string | null
           created_at?: string
           game_id?: number | null
+          game_result?: string | null
           home_goals?: number | null
           home_team?: string | null
           id?: string

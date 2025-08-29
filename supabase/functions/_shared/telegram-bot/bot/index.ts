@@ -111,7 +111,7 @@ bot.callbackQuery('predict', async (ctx) => {
 	const hasPredictions = usersPredictions.length > 0
 	const roundNumber = games[0].round
 	const predictionsList = usersPredictions
-		.map(userPredictionIteratee)
+		.map((prediction) => userPredictionIteratee({ ...prediction, ctx }))
 		.join('\n')
 
 	const header = hasPredictions ? ctx.t('predicted', { n: roundNumber }) : ''
@@ -212,7 +212,9 @@ bot.on('callback_query:data', async (ctx) => {
 			games[0].round - 1
 		)
 		ctx.editMessageText(
-			usersPredictions.map(userPredictionIteratee).join('\n'),
+			usersPredictions
+				.map((prediction) => userPredictionIteratee({ ...prediction, ctx }))
+				.join('\n'),
 			{ reply_markup: buildMenuButton(ctx) }
 		)
 	}
