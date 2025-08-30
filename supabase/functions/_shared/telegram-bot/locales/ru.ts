@@ -25,6 +25,6 @@ score = 🎯 угадан точный счёт
 difference = ⚖️ угадана разница в счёте
 winner = 🎲 угадан победитель матча
 
-fallback = отправьте /start чтобы начать`
+fallback = отправь /start чтобы начать`
 
 export default ru

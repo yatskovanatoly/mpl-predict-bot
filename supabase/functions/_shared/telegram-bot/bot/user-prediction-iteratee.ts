@@ -6,10 +6,9 @@ export const userPredictionIteratee = ({
 	away_team,
 	home_goals,
 	away_goals,
-	status,
 	game_result,
-	ctx,
+	status,
 }: PredictionRow & { ctx: MyContext }) =>
 	`${home_team} – ${away_team} → ${home_goals}:${away_goals} ${
-		game_result && status ? `${ctx.t(status)} (${game_result})` : ''
+		game_result && status !== 'score' ? `(${game_result})` : ''
 	}`
