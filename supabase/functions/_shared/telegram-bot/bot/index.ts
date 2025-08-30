@@ -1,10 +1,10 @@
 import {
-  Bot,
-  Context,
-  GrammyError,
-  InlineKeyboard,
-  session,
-  SessionFlavor,
+	Bot,
+	Context,
+	GrammyError,
+	InlineKeyboard,
+	session,
+	SessionFlavor,
 } from 'https://deno.land/x/grammy@v1.38.1/mod.ts'
 import { PostgrestError } from 'jsr:@supabase/supabase-js'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
@@ -12,29 +12,30 @@ import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n'
 import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
 import { addHours, differenceInDays } from 'npm:date-fns'
 import {
-  buildMainMenu,
-  buildMenuButton,
-  buildRoundMenu,
+	buildMainMenu,
+	buildMenuButton,
+	buildRoundMenu,
 } from '../helpers/build-menus.ts'
 import { editHelper } from '../helpers/edit-helper.ts'
 import { parseGameId } from '../helpers/parse-game-id.ts'
 import { parseScore } from '../helpers/parse-score.ts'
 import { logosMap } from '../lib/logos-by-id.ts'
 import {
-  getCurrentRound,
-  getLeaderboard,
-  getPredictionsByUser,
-  LeaderboardRow,
+	getCurrentRound,
+	getLeaderboard,
+	getPredictionsByUser,
+	LeaderboardRow,
 } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
 import { FALLBACK_IMG } from '../lib/urls.ts'
 import ru from '../locales/ru.ts'
 import { formatUserPredictions } from './format-user-predictions.ts'
+import { gameResultIteratee } from './game-result-iteratee.ts'
 import { groupPredictionsByStatus } from './group-predictions-by-status.ts'
 import { saveUserPrediction } from './save-prediction.ts'
 
-const token = Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
-// const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
+// const token = Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
+const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
 const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
 
@@ -74,6 +75,7 @@ bot.callbackQuery('predict', async (ctx) => {
 	const isPastMatchDay = new Date(games[0].date) <= addHours(new Date(), 3)
 
 	if (!games || differenceInDays(new Date(games[0].date), new Date()) > 30) {
+		await ctx.answerCallbackQuery()
 		return ctx.editMessageText(ctx.t('no_upcoming_games'), {
 			reply_markup: buildMenuButton(ctx),
 		})
@@ -84,10 +86,16 @@ bot.callbackQuery('predict', async (ctx) => {
 		games[0].round
 	)
 
-	if (isPastMatchDay && !usersPredictions) {
-		return ctx.editMessageText(ctx.t('prediction_closed'), {
-			reply_markup: buildMenuButton(ctx),
-		})
+	if (isPastMatchDay && !usersPredictions.length) {
+		await ctx.answerCallbackQuery()
+		return ctx.editMessageText(
+			ctx.t('no_predictions_made') +
+				'\n\n' +
+				games.map(gameResultIteratee).join('\n'),
+			{
+				reply_markup: buildMenuButton(ctx),
+			}
+		)
 	}
 
 	const gamesWithPrediction: Game[] = []
@@ -277,7 +285,7 @@ bot.on('message:text', async (ctx) => {
 	await ctx.reply(ctx.t('fallback'))
 })
 
-bot.start()
+// bot.start()
 
 export type SessionData = {
 	game: Game | undefined
