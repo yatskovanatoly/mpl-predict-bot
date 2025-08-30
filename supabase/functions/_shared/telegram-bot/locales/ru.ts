@@ -1,6 +1,7 @@
 const ru = `start = чем займёмся?
 menu = ⬅️ меню
 predict = ⚽ сделать прогноз
+predict_my = ⚽ мои прогнозы
 prev = 📋 результаты {$n}-го тура
 predicted = твои прогнозы на {$n}-й тур:
 leaderboard = 📊 таблица лидеров
