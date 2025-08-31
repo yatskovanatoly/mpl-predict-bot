@@ -29,7 +29,7 @@ export async function getUserById(
 	const { data, error } = await supabase
 		.from('leaderboard')
 		.select('*')
-		.eq('id', userId)
+		.eq('user_id', userId)
 		.maybeSingle()
 	if (error) throw error
 	return data
@@ -69,12 +69,11 @@ export async function getPredictionsByUser(
 	userId: number,
 	round: number
 ): Promise<PredictionRow[]> {
-	const user = await getUserById(userId)
-	if (!user) return []
+	if (!userId || !round) return []
 	const { data, error } = await supabase
 		.from('predictions')
 		.select('*')
-		.eq('user_id', user.id)
+		.eq('user_id', userId)
 		.eq('round', round)
 		.order('created_at', { ascending: false })
 	if (error) throw error
@@ -91,7 +90,7 @@ export async function getAllPredictions(): Promise<PredictionRow[]> {
 }
 
 export type LeaderboardRow = {
-	id: string
+	user_id: string
 	username: string
 	points: number
 	created_on: string
