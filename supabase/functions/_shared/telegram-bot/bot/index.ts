@@ -72,9 +72,11 @@ bot.command('start', async (ctx) => {
 })
 
 bot.callbackQuery('predict', async (ctx) => {
-	const isPastMatchDay = new Date(games[0].date) <= addHours(new Date(), 3)
+	const matchDate = new Date(games[0].date)
+	const now = addHours(new Date(), 3)
+	const isPastMatchDay = matchDate <= now
 
-	if (!games || differenceInDays(new Date(games[0].date), new Date()) > 30) {
+	if (!games || differenceInDays(matchDate, now) > 30) {
 		await ctx.answerCallbackQuery()
 		return ctx.editMessageText(ctx.t('no_upcoming_games'), {
 			reply_markup: buildMenuButton(ctx),
