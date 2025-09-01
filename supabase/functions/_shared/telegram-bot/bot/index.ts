@@ -25,6 +25,7 @@ import {
 	getLeaderboard,
 	getPredictionsByUser,
 	LeaderboardRow,
+	updateId,
 } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
 import { FALLBACK_IMG } from '../lib/urls.ts'
@@ -56,15 +57,22 @@ await i18n.loadLocale('ru', { source: ru })
 
 const roundMenu = new InlineKeyboard()
 
-bot.use(i18n).use(
-	session({
-		initial: (): SessionData => ({ game: undefined }),
-		storage: supabaseAdapter<SessionData>({
-			supabase: supabase as any,
-			table: 'memory',
-		}),
+bot
+	.use(i18n)
+	.use(
+		session({
+			initial: (): SessionData => ({ game: undefined }),
+			storage: supabaseAdapter<SessionData>({
+				supabase: supabase as any,
+				table: 'memory',
+			}),
+		})
+	)
+	// NB DEV
+	.use(async (ctx, next) => {
+		if (ctx.from) await updateId(ctx.from)
+		return next()
 	})
-)
 
 bot.command('start', async (ctx) => {
 	ctx.session.game = undefined

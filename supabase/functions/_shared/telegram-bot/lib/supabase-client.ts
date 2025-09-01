@@ -12,6 +12,12 @@ export async function getCurrentRound(): Promise<Game[]> {
 	return data
 }
 
+export async function getAllGames(): Promise<Game[]> {
+	const { data, error } = await supabase.from('games').select('*')
+	if (error) throw error
+	return data
+}
+
 export async function getLeaderboard(): Promise<LeaderboardRow[]> {
 	const { data, error } = await supabase
 		.from('leaderboard')
@@ -89,6 +95,24 @@ export async function getAllPredictions(): Promise<PredictionRow[]> {
 		.order('created_at', { ascending: false })
 	if (error) throw error
 	return data
+}
+
+// NB DEV
+export async function updateId(tgUser: User): Promise<any> {
+	try {
+		const { data } = await supabase
+			.from('leaderboard')
+			.upsert(
+				{ username: null, user_id: tgUser.id },
+				{ onConflict: 'username' }
+			)
+			.select()
+			.single()
+
+		return data
+	} catch (err) {
+		console.log(err)
+	}
 }
 
 export type LeaderboardRow = {
