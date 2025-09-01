@@ -192,10 +192,11 @@ bot.on('callback_query:data', async (ctx) => {
 
 			let table = `${ctx.t('leaderboard_view')}\n\n`
 			leaderboard.forEach((p: LeaderboardRow, i) => {
-				if (p.username)
-					table += `${i + 1}. @${p.username} — ${ctx.t('points', {
-						pts: p.points,
-					})}\n`
+				table += `${i + 1}. ${
+					p.username ? `@${p.username}` : p.first_name
+				} — ${ctx.t('points', {
+					pts: p.points,
+				})}\n`
 			})
 
 			await editHelper(
