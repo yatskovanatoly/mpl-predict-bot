@@ -192,9 +192,10 @@ bot.on('callback_query:data', async (ctx) => {
 
 			let table = `${ctx.t('leaderboard_view')}\n\n`
 			leaderboard.forEach((p: LeaderboardRow, i) => {
-				table += `${i + 1}. ${
-					p.username ? `@${p.username}` : p.first_name
-				} — ${ctx.t('points', {
+				const name = `${p.first_name}${p.last_name ? ` ${p.last_name}` : ''}`
+				const displayName = p.username ? `@${p.username}` : name
+
+				table += `${i + 1}. ${displayName} — ${ctx.t('points', {
 					pts: p.points,
 				})}\n`
 			})
