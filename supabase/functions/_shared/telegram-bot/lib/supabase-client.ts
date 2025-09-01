@@ -54,7 +54,8 @@ export async function createPrediction(
 			home_goals: homeGoals,
 			away_goals: awayGoals,
 			username: tgUser.username,
-      first_name: tgUser.first_name,
+			first_name: tgUser.first_name,
+			last_name: tgUser.last_name,
 			round,
 		})
 		.select()
@@ -93,7 +94,8 @@ export async function getAllPredictions(): Promise<PredictionRow[]> {
 export type LeaderboardRow = {
 	user_id: string
 	username?: string
-  first_name: string
+	first_name: string
+	last_name?: string
 	points: number
 	created_on: string
 }
