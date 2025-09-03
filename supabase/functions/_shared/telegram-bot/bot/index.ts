@@ -199,7 +199,7 @@ bot.on('callback_query:data', async (ctx) => {
 	if (data === 'leaderboard') {
 		try {
 			const leaderboardGrouped = await getLeaderboardGrouped()
-			if (!leaderboardGrouped || !leaderboardGrouped.length) {
+			if (!Object.entries(leaderboardGrouped).length) {
 				await ctx.editMessageText(ctx.t('leaderboard_empty'), {
 					reply_markup: buildMenuButton(ctx),
 				})
