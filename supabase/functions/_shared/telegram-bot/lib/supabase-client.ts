@@ -12,6 +12,13 @@ export async function getCurrentRound(): Promise<Game[]> {
 	return data
 }
 
+export async function getLeaderboardGrouped(): Promise<any> {
+	const { data, error } = await supabase.rpc('get_leaderboard_by_points')
+
+	if (error) throw error
+	return data
+}
+
 export async function getNextRound(): Promise<Game[]> {
 	const { data, error } = await supabase
 		.from('next_round')

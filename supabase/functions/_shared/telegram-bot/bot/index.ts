@@ -11,6 +11,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n'
 import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
 import { addDays, addHours, differenceInDays } from 'npm:date-fns'
+import { buildLeaderboard } from '../helpers/build-leaderboard.ts'
 import {
 	buildMainMenu,
 	buildMenuButton,
@@ -22,10 +23,9 @@ import { parseScore } from '../helpers/parse-score.ts'
 import { logosMap } from '../lib/logos-by-id.ts'
 import {
 	getCurrentRound,
-	getLeaderboard,
+	getLeaderboardGrouped,
 	getNextRound,
 	getPredictionsByUser,
-	LeaderboardRow,
 	updateId,
 } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
@@ -198,23 +198,15 @@ bot.on('callback_query:data', async (ctx) => {
 
 	if (data === 'leaderboard') {
 		try {
-			const leaderboard = await getLeaderboard()
-			if (!leaderboard || !leaderboard.length) {
+			const leaderboardGrouped = await getLeaderboardGrouped()
+			if (!leaderboardGrouped || !leaderboardGrouped.length) {
 				await ctx.editMessageText(ctx.t('leaderboard_empty'), {
 					reply_markup: buildMenuButton(ctx),
 				})
 				return
 			}
 
-			let table = `${ctx.t('leaderboard_view')}\n\n`
-			leaderboard.forEach((p: LeaderboardRow, i) => {
-				const name = `${p.first_name}${p.last_name ? ` ${p.last_name}` : ''}`
-				const displayName = p.username ? `@${p.username}` : name
-
-				table += `${i + 1}. ${displayName} — ${ctx.t('points', {
-					pts: p.points,
-				})}\n`
-			})
+			const table = buildLeaderboard(leaderboardGrouped, ctx)
 
 			await editHelper(
 				() =>
