@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 			return new Response('Missing TELEGRAM_BOT_TOKEN env var', { status: 500 })
 		}
 
-		const { message } = await req.json()
+		const { message, disable_notification } = await req.json()
 
 		if (!message) {
 			return new Response('Message is required', { status: 400 })
@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
 					body: JSON.stringify({
 						chat_id: user.id,
 						text: message,
+            disable_notification
 					}),
 				}
 			)
