@@ -12,6 +12,15 @@ export async function getCurrentRound(): Promise<Game[]> {
 	return data
 }
 
+export async function getNextRound(): Promise<Game[]> {
+	const { data, error } = await supabase
+		.from('next_round')
+		.select('*')
+		.order('time')
+	if (error) throw error
+	return data
+}
+
 export async function getAllGames(): Promise<Game[]> {
 	const { data, error } = await supabase.from('games').select('*')
 	if (error) throw error
