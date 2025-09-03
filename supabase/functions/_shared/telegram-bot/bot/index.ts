@@ -36,8 +36,8 @@ import { gameResultIteratee } from './game-result-iteratee.ts'
 import { groupPredictionsByStatus } from './group-predictions-by-status.ts'
 import { saveUserPrediction } from './save-prediction.ts'
 
-// const token = Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
-const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
+const token = Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
+// const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
 const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
 
@@ -85,6 +85,27 @@ bot
 bot.command('start', async (ctx) => {
 	ctx.session.game = undefined
 	ctx.reply(ctx.t('start'), { reply_markup: await buildMainMenu(ctx, games) })
+})
+
+bot.command('changelog', async (ctx) => {
+	if (!ctx.from) return
+
+	const adminId = Deno.env.get('TG_ADMIN_ID')
+
+	if (adminId && ctx.from.id === parseInt(adminId)) {
+		const { data, error } = await supabase.functions.invoke('changelog', {
+			body: {
+				name: 'Functions',
+				message: `${ctx.match}`,
+				disable_notification: true,
+			},
+		})
+		if (error) {
+			console.error('Error invoking function:', error)
+		} else {
+			console.log('Function result:', data)
+		}
+	}
 })
 
 bot.callbackQuery('predict', async (ctx) => {
@@ -297,7 +318,7 @@ bot.on('message:text', async (ctx) => {
 	await ctx.reply(ctx.t('fallback'))
 })
 
-// bot.start()
+bot.start()
 
 export type SessionData = {
 	game: Game | undefined
