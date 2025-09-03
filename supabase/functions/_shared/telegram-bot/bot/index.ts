@@ -10,7 +10,7 @@ import { PostgrestError } from 'jsr:@supabase/supabase-js'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n'
 import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
-import { addHours, differenceInDays } from 'npm:date-fns'
+import { addDays, addHours, differenceInDays } from 'npm:date-fns'
 import {
 	buildMainMenu,
 	buildMenuButton,
@@ -23,6 +23,7 @@ import { logosMap } from '../lib/logos-by-id.ts'
 import {
 	getCurrentRound,
 	getLeaderboard,
+	getNextRound,
 	getPredictionsByUser,
 	LeaderboardRow,
 	updateId,
@@ -47,7 +48,14 @@ if (!supabaseKey) throw new Error('db key is missing')
 export const bot = new Bot<MyContext>(token)
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
-const games = await getCurrentRound()
+const currentGames = await getCurrentRound()
+const nextGames = await getNextRound()
+
+const games =
+	currentGames.some((game) => !game.score) &&
+	addDays(new Date(currentGames.at(-1)!.date), 1) >= new Date()
+		? currentGames
+		: nextGames
 
 const i18n = new I18n<any>({
 	defaultLocale: 'ru',
@@ -234,7 +242,6 @@ bot.on('callback_query:data', async (ctx) => {
 	}
 
 	if (data === 'prev') {
-		ctx.answerCallbackQuery()
 		const usersPredictions = await getPredictionsByUser(
 			ctx.from!.id,
 			games[0].round - 1
@@ -243,6 +250,7 @@ bot.on('callback_query:data', async (ctx) => {
 		const predictionsList = formatUserPredictions(grouped, ctx)
 
 		ctx.editMessageText(predictionsList, { reply_markup: buildMenuButton(ctx) })
+		ctx.answerCallbackQuery()
 	}
 })
 
