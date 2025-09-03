@@ -6,9 +6,10 @@ import { sanitizeTeamName } from '../_shared/telegram-bot/helpers/sanitize-team-
 import { Game, RoundData } from '../_shared/telegram-bot/lib/types.ts'
 import { BASE_URL, MPL_ID } from '../_shared/telegram-bot/lib/urls.ts'
 
-const getDocument = async (): Promise<Document> => {
+const getDocument = async (roundN?: number): Promise<Document> => {
 	const response = await fetch(
-		`https://${BASE_URL}/championships/${MPL_ID}/games`
+		`https://${BASE_URL}/championships/${MPL_ID}/games` +
+			`${roundN ? `?round=${roundN.toString()}` : ''}`
 	)
 	const html = await response.text()
 	const doc = new DOMParser().parseFromString(html, 'text/html')
@@ -16,9 +17,9 @@ const getDocument = async (): Promise<Document> => {
 	return doc
 }
 
-const getCurrentRound = async (): Promise<RoundData> => {
+const getCurrentRound = async (roundN?: number): Promise<RoundData> => {
 	const games: Game[] = []
-	const doc = await getDocument()
+	const doc = await getDocument(roundN)
 
 	const date = doc.querySelector('.category2')?.textContent.trim() ?? ''
 	const round = Number(doc.querySelector('.current')?.textContent ?? '0')
@@ -90,18 +91,28 @@ const getCurrentRound = async (): Promise<RoundData> => {
 
 Deno.serve(async () => {
 	const games = await getCurrentRound()
+	const nextGames = await getCurrentRound(games[0].round + 1)
 
 	const supabase = createClient(
 		Deno.env.get('SUPABASE_URL') ?? '',
 		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 	)
 
-	const { data, error } = await supabase
+	const current_round = await supabase
 		.from('current_round')
 		.upsert(games, {
 			onConflict: 'game_id',
 		})
 		.select()
+	const next_round = await supabase
+		.from('next_round')
+		.upsert(nextGames, {
+			onConflict: 'game_id',
+		})
+		.select()
+
+	const error = current_round.error ?? next_round.error
+
 	if (error) {
 		return new Response(
 			JSON.stringify({
@@ -115,7 +126,10 @@ Deno.serve(async () => {
 	}
 	return new Response(
 		JSON.stringify({
-			inserted: data?.length ?? 0,
+			inserted: {
+				current: current_round.data?.length ?? 0,
+				next: next_round.data?.length ?? 0,
+			},
 		}),
 		{
 			headers,
