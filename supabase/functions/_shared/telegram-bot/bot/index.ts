@@ -96,7 +96,7 @@ bot.command('changelog', async (ctx) => {
 		const { data, error } = await supabase.functions.invoke('changelog', {
 			body: {
 				name: 'Functions',
-				message: `${ctx.match}`,
+				message: ctx.match,
 				disable_notification: true,
 			},
 		})
