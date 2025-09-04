@@ -119,7 +119,7 @@ export async function updateId(tgUser: User): Promise<any> {
 		const { data } = await supabase
 			.from('leaderboard')
 			.upsert(
-				{ username: null, user_id: tgUser.id },
+				{ user_id: tgUser.id, username: tgUser.username },
 				{ onConflict: 'username' }
 			)
 			.select()
