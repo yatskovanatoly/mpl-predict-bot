@@ -4,7 +4,7 @@ Deno.serve(async (req) => {
 	try {
 		const supabase = createClient(
 			Deno.env.get('SUPABASE_URL')!,
-			Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+			Deno.env.get('SUPABASE_ANON_KEY')!
 		)
 
 		const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')
@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
 		// Get all users
 		const { data: users, error } = await supabase
 			.from('leaderboard')
-			.select('id')
+			.select('user_id')
 
 		if (error) {
 			return new Response(JSON.stringify({ error: error.message }), {
@@ -30,16 +30,16 @@ Deno.serve(async (req) => {
 		}
 
 		// Send message to each user
-		for (const user of users) {
+		for (const user_id of users) {
 			await fetch(
 				`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
 				{
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
-						chat_id: user.id,
+						chat_id: user_id.user_id,
 						text: message,
-            disable_notification
+						disable_notification,
 					}),
 				}
 			)
