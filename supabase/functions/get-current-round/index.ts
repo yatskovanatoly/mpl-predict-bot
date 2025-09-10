@@ -92,26 +92,37 @@ const getCurrentRound = async (roundN?: number): Promise<RoundData> => {
 Deno.serve(async () => {
 	const games = await getCurrentRound()
 	const nextGames = await getCurrentRound(games[0].round + 1)
+	let current_round
+	let next_round
 
 	const supabase = createClient(
 		Deno.env.get('SUPABASE_URL') ?? '',
 		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 	)
 
-	const current_round = await supabase
+	const { data: existingCurrent } = await supabase
 		.from('current_round')
-		.upsert(games, {
-			onConflict: 'game_id',
-		})
-		.select()
-	const next_round = await supabase
-		.from('next_round')
-		.upsert(nextGames, {
-			onConflict: 'game_id',
-		})
-		.select()
+		.select('round')
+		.limit(1)
+		.single()
 
-	const error = current_round.error ?? next_round.error
+	if (existingCurrent?.round !== games[0].round) {
+		await supabase.from('current_round').delete().neq('round', games[0]?.round)
+		current_round = await supabase.from('current_round').insert(games).select()
+	}
+
+	const { data: existingNext } = await supabase
+		.from('next_round')
+		.select('round')
+		.limit(1)
+		.single()
+
+	if (existingNext?.round !== nextGames[0].round) {
+		await supabase.from('next_round').delete().neq('round', nextGames[0]?.round)
+		next_round = await supabase.from('next_round').insert(nextGames).select()
+	}
+
+	const error = current_round?.error ?? next_round?.error
 
 	if (error) {
 		return new Response(
@@ -127,8 +138,8 @@ Deno.serve(async () => {
 	return new Response(
 		JSON.stringify({
 			inserted: {
-				current: current_round.data?.length ?? 0,
-				next: next_round.data?.length ?? 0,
+				current: current_round?.data?.length ?? 0,
+				next: next_round?.data?.length ?? 0,
 			},
 		}),
 		{
