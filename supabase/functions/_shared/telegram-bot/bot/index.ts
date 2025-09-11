@@ -12,7 +12,9 @@ import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n'
 import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
 import { addDays, addHours, differenceInDays } from 'npm:date-fns'
 import { buildLeaderboard } from '../helpers/build-leaderboard.ts'
+import { buildMatchMessage } from '../helpers/build-match-message.ts'
 import {
+	buildEditMenu,
 	buildMainMenu,
 	buildMenuButton,
 	buildRoundMenu,
@@ -20,7 +22,6 @@ import {
 import { editHelper } from '../helpers/edit-helper.ts'
 import { parseGameId } from '../helpers/parse-game-id.ts'
 import { parseScore } from '../helpers/parse-score.ts'
-import { logosMap } from '../lib/logos-by-id.ts'
 import {
 	getCurrentRound,
 	getLeaderboardGrouped,
@@ -29,7 +30,6 @@ import {
 	updateId,
 } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
-import { FALLBACK_IMG } from '../lib/urls.ts'
 import ru from '../locales/ru.ts'
 import { formatUserPredictions } from './format-user-predictions.ts'
 import { gameResultIteratee } from './game-result-iteratee.ts'
@@ -203,18 +203,7 @@ bot.on('callback_query:data', async (ctx) => {
 
 		ctx.session.game = game
 
-		if (game)
-			await ctx.replyWithMediaGroup([
-				{
-					type: 'photo',
-					media: logosMap[game.home_id] || FALLBACK_IMG,
-					caption: `${ctx.t('match')} ${game?.home} - ${game?.away}?`,
-				},
-				{
-					type: 'photo',
-					media: logosMap[game.away_id] || FALLBACK_IMG,
-				},
-			])
+		if (game) await buildMatchMessage(ctx, game)
 	}
 
 	if (data === 'leaderboard') {
@@ -264,6 +253,26 @@ bot.on('callback_query:data', async (ctx) => {
 
 		ctx.editMessageText(predictionsList, { reply_markup: buildMenuButton(ctx) })
 		ctx.answerCallbackQuery()
+	}
+
+	if (data === 'edit') {
+		const usersPredictions = await getPredictionsByUser(
+			ctx.from!.id,
+			games[0].round
+		)
+		ctx.editMessageText(ctx.t('choose_edit_match'), {
+			reply_markup: buildEditMenu(ctx, usersPredictions),
+		})
+		ctx.answerCallbackQuery()
+	}
+
+	if (data.startsWith('edit_')) {
+		const game = games.find((game: Game) => game.game_id === parseGameId(data))
+
+		ctx.session.game = game
+
+		await ctx.answerCallbackQuery()
+		if (game) await buildMatchMessage(ctx, game)
 	}
 })
 

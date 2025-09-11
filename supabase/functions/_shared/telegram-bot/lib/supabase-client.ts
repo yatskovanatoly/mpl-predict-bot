@@ -68,18 +68,21 @@ export async function createPrediction(
 ): Promise<PredictionRow> {
 	const { data, error } = await supabase
 		.from('predictions')
-		.insert({
-			user_id: tgUser.id,
-			game_id: gameId,
-			home_team: homeTeam,
-			away_team: awayTeam,
-			home_goals: homeGoals,
-			away_goals: awayGoals,
-			username: tgUser.username,
-			first_name: tgUser.first_name,
-			last_name: tgUser.last_name,
-			round,
-		})
+		.upsert(
+			{
+				user_id: tgUser.id,
+				game_id: gameId,
+				home_team: homeTeam,
+				away_team: awayTeam,
+				home_goals: homeGoals,
+				away_goals: awayGoals,
+				username: tgUser.username,
+				first_name: tgUser.first_name,
+				last_name: tgUser.last_name,
+				round,
+			},
+			{ onConflict: 'game_id, user_id' }
+		)
 		.select()
 		.single()
 	if (error) {
