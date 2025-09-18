@@ -47,13 +47,17 @@ const logos = [
 		size: 35436,
 		uploadedAt: '2025-08-26T17:14:53.000Z',
 	},
+	// {
+	// 	name: 'shit.png',
+	// 	key: 'F0i2RuICzmMaE37LXzIRGQyxPfE2zUavRYXCiSjDcrO0I1hF',
+	// 	customId: null,
+	// 	url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMaE37LXzIRGQyxPfE2zUavRYXCiSjDcrO0I1hF',
+	// 	size: 69400,
+	// 	uploadedAt: '2025-08-26T17:14:53.000Z',
+	// },
 	{
-		name: 'shit.png',
-		key: 'F0i2RuICzmMaE37LXzIRGQyxPfE2zUavRYXCiSjDcrO0I1hF',
-		customId: null,
-		url: 'https://th1o7i0kml.ufs.sh/f/F0i2RuICzmMaE37LXzIRGQyxPfE2zUavRYXCiSjDcrO0I1hF',
-		size: 69400,
-		uploadedAt: '2025-08-26T17:14:53.000Z',
+		name: 'shit',
+		url: 'https://mychamp.ru/system/clubs/5296/large.png',
 	},
 	{
 		name: 'raketa.png',
