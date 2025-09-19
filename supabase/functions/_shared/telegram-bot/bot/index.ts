@@ -305,7 +305,12 @@ bot.on('message:text', async (ctx) => {
 				const predicted = await getPredictionsByUser(ctx.from.id, round).then(
 					(data) => data.map((p) => p.game_id)
 				)
-				await ctx.reply(ctx.t('match_select'), {
+				const title =
+					predicted.length < games.length
+						? ctx.t('match_select')
+						: ctx.t('all_predictions_made')
+
+				await ctx.reply(title, {
 					reply_markup: buildRoundMenu(ctx, games, predicted),
 				})
 				ctx.session.game = undefined
