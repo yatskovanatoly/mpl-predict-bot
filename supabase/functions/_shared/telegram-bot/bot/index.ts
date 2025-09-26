@@ -67,7 +67,10 @@ bot
 	.use(i18n)
 	.use(
 		session({
-			initial: (): SessionData => ({ game: undefined }),
+			initial: (): SessionData => ({
+				game: undefined,
+				leaderboard: { page: 1, total_pages: 1 },
+			}),
 			storage: supabaseAdapter<SessionData>({
 				supabase: supabase as any,
 				table: 'memory',
@@ -81,7 +84,10 @@ bot
 	})
 
 bot.command('start', async (ctx) => {
-	ctx.session.game = undefined
+	ctx.session = {
+		game: undefined,
+		leaderboard: { page: 1, total_pages: 1 },
+	}
 	ctx.reply(ctx.t('start'), { reply_markup: await buildMainMenu(ctx, games) })
 })
 
@@ -207,7 +213,7 @@ bot.on('callback_query:data', async (ctx) => {
 	if (data.startsWith('leaderboard')) await handleLeaderboard(ctx, data)
 
 	if (data === 'menu') {
-		ctx.session.game = undefined
+		ctx.session = { game: undefined, leaderboard: { page: 1, total_pages: 1 } }
 		ctx.answerCallbackQuery()
 		ctx.editMessageText(ctx.t('start'), {
 			reply_markup: await buildMainMenu(ctx, games),
@@ -307,5 +313,9 @@ bot.on('message:text', async (ctx) => {
 
 export type SessionData = {
 	game: Game | undefined
+	leaderboard: {
+		page: number
+		total_pages: number
+	}
 }
 export type MyContext = Context & SessionFlavor<SessionData> & I18nFlavor

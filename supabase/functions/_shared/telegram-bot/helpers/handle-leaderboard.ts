@@ -1,38 +1,35 @@
+import { MyContext } from '../bot/index.ts'
 import { getLeaderboardGrouped } from '../lib/supabase-client.ts'
 import { buildLeaderboard } from './build-leaderboard.ts'
 import { buildLeaderboardMenu, buildMenuButton } from './build-menus.ts'
 import { editHelper } from './edit-helper.ts'
 
-let leaderboardPage = 1
-let totalPages = 0
+export const handleLeaderboard = async (ctx: MyContext, data: string) => {
+	if (!ctx.session.leaderboard)
+		ctx.session.leaderboard = { page: 1, total_pages: 1 }
 
-export const handleLeaderboard = async (ctx: any, data: string) => {
 	try {
-		let page = leaderboardPage
-
-		if (data === 'leaderboard') {
-			page = leaderboardPage
-		} else if (data === 'leaderboard_next') {
-			page = leaderboardPage < totalPages ? leaderboardPage + 1 : 1
+		let { page, total_pages } = ctx.session.leaderboard
+		if (data === 'leaderboard_next') {
+			page = page < total_pages ? page + 1 : 1
 		} else if (data === 'leaderboard_previous') {
-			page = leaderboardPage > 1 ? leaderboardPage - 1 : totalPages
+			page = page > 1 ? page - 1 : total_pages
 		} else if (data === 'leaderboard_first_page') {
 			page = 1
 		}
 
 		const leaderboardGrouped = await getLeaderboardGrouped(page)
-		totalPages = leaderboardGrouped.total_pages
-		console.log(leaderboardPage, totalPages, leaderboardGrouped)
+
+		ctx.session.leaderboard.page = leaderboardGrouped.page
+		ctx.session.leaderboard.total_pages = leaderboardGrouped.total_pages
 
 		if (!Object.entries(leaderboardGrouped.data).length) {
 			await ctx.editMessageText(ctx.t('leaderboard_empty'), {
 				reply_markup: buildMenuButton(ctx),
 			})
-			leaderboardPage = 1
+			ctx.session.leaderboard.page = 1
 			return
 		}
-
-		leaderboardPage = leaderboardGrouped.page
 
 		const table = buildLeaderboard(leaderboardGrouped.data, ctx)
 
