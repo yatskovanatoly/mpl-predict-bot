@@ -1,7 +1,5 @@
-import {
-  webhookCallback
-} from 'https://deno.land/x/grammy@v1.38.1/mod.ts';
-import { bot } from "../_shared/telegram-bot/bot/index.ts";
+import { webhookCallback } from 'https://deno.land/x/grammy@v1.38.1/mod.ts'
+import { bot } from '../_shared/telegram-bot/bot/index.ts'
 
 const handleUpdate = webhookCallback(bot, 'std/http')
 

@@ -28,6 +28,8 @@ difference = ⚖️ угадана разница в счёте
 winner = 🎲 угадан победитель матча
 edit_prediction = ✏️ изменить прогноз
 choose_edit_match = ✏️ выбери прогноз, который хочешь изменить:
+forward = →
+back = ←
 
 fallback = отправь /start чтобы начать`
 

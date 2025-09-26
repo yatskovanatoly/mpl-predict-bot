@@ -1,26 +1,28 @@
+import { MyContext } from '../bot/index.ts'
+
 export const buildLeaderboard = (
 	leaderboard: LeaderboardResult,
-	ctx: any
+	ctx: MyContext
 ): string => {
 	let table = `${ctx.t('leaderboard_view')}\n\n`
 
-	// Places are object keys, so we sort them numerically
 	Object.keys(leaderboard)
 		.map(Number)
 		.sort((a, b) => a - b)
 		.forEach((place) => {
 			const users = leaderboard[place]
-			const points = users[0].points // all in same place have equal points
+			const points = users[0].points
 
-			// Join all users for this place
 			const userList = users
 				.map((p) => {
 					const name = `${p.first_name}${p.last_name ? ` ${p.last_name}` : ''}`
-					return p.username ? `@${p.username}` : name
+					const self = ctx.from?.id === p.user_id ? '👤' : ''
+					const displayName = p.username ? `@${p.username}` : name
+
+					return self + displayName
 				})
 				.join(', ')
 
-			// Add to leaderboard string
 			table += `${place}. ${userList} — ${ctx.t('points', { pts: points })}\n`
 		})
 
@@ -35,4 +37,4 @@ type LeaderboardRow = {
 	points: number
 }
 
-type LeaderboardResult = Record<number, LeaderboardRow[]> // { place: [users] }
+type LeaderboardResult = Record<number, LeaderboardRow[]>

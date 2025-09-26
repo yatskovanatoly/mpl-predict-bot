@@ -4,7 +4,7 @@ import { MyContext } from '../bot/index.ts'
 import { getPredictionsByUser, PredictionRow } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
 
-export async function buildMainMenu(ctx: MyContext, games: Game[]) {
+export const buildMainMenu = async (ctx: MyContext, games: Game[]) => {
 	const kb = new InlineKeyboard()
 	const isPastMatchDay = new Date(games[0].date) <= addHours(new Date(), 3)
 
@@ -24,11 +24,11 @@ export async function buildMainMenu(ctx: MyContext, games: Game[]) {
 	return kb
 }
 
-export function buildRoundMenu(
+export const buildRoundMenu = (
 	ctx: MyContext,
 	games: Game[],
 	userPredictions: number[]
-) {
+) => {
 	const kb = new InlineKeyboard()
 
 	games.forEach(({ game_id, home, away }) => {
@@ -49,7 +49,7 @@ export function buildRoundMenu(
 export const buildMenuButton = (ctx: MyContext) =>
 	new InlineKeyboard().text(ctx.t('menu'), 'menu')
 
-export function buildEditMenu(ctx: MyContext, games: PredictionRow[]) {
+export const buildEditMenu = (ctx: MyContext, games: PredictionRow[]) => {
 	const kb = new InlineKeyboard()
 
 	games.forEach(({ game_id, home_team, home_goals, away_team, away_goals }) => {
@@ -59,6 +59,23 @@ export function buildEditMenu(ctx: MyContext, games: PredictionRow[]) {
 		).row()
 	})
 
+	kb.text(ctx.t('menu'), 'menu')
+
+	return kb
+}
+
+export const buildLeaderboardMenu = (
+	ctx: MyContext,
+	leaderboardGrouped: Record<string, any>
+) => {
+	const kb = new InlineKeyboard()
+
+	kb.text(ctx.t('back'), 'leaderboard_previous')
+	kb.text(
+		`${leaderboardGrouped.page} / ${leaderboardGrouped.total_pages}`,
+		'leaderboard_first_page'
+	)
+	kb.text(ctx.t('forward'), 'leaderboard_next').row()
 	kb.text(ctx.t('menu'), 'menu')
 
 	return kb

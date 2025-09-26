@@ -11,7 +11,6 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n'
 import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
 import { addDays, addHours, differenceInDays } from 'npm:date-fns'
-import { buildLeaderboard } from '../helpers/build-leaderboard.ts'
 import { buildMatchMessage } from '../helpers/build-match-message.ts'
 import {
 	buildEditMenu,
@@ -19,12 +18,11 @@ import {
 	buildMenuButton,
 	buildRoundMenu,
 } from '../helpers/build-menus.ts'
-import { editHelper } from '../helpers/edit-helper.ts'
+import { handleLeaderboard } from '../helpers/handle-leaderboard.ts'
 import { parseGameId } from '../helpers/parse-game-id.ts'
 import { parseScore } from '../helpers/parse-score.ts'
 import {
 	getCurrentRound,
-	getLeaderboardGrouped,
 	getNextRound,
 	getPredictionsByUser,
 	updateId,
@@ -206,34 +204,7 @@ bot.on('callback_query:data', async (ctx) => {
 		if (game) await buildMatchMessage(ctx, game)
 	}
 
-	if (data === 'leaderboard') {
-		try {
-			const leaderboardGrouped = await getLeaderboardGrouped()
-			if (!Object.entries(leaderboardGrouped).length) {
-				await ctx.editMessageText(ctx.t('leaderboard_empty'), {
-					reply_markup: buildMenuButton(ctx),
-				})
-				return
-			}
-
-			const table = buildLeaderboard(leaderboardGrouped, ctx)
-
-			await editHelper(
-				() =>
-					ctx.editMessageText(table, {
-						reply_markup: buildMenuButton(ctx),
-					}),
-				ctx
-			)
-			return
-		} catch (err) {
-			console.error(err)
-			await ctx.reply(ctx.t('leaderboard_fail'), {
-				reply_markup: buildMenuButton(ctx),
-			})
-			return
-		}
-	}
+	if (data.startsWith('leaderboard')) await handleLeaderboard(ctx, data)
 
 	if (data === 'menu') {
 		ctx.session.game = undefined

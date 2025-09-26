@@ -67,6 +67,7 @@ export type Database = {
           away_name: string
           created_at: string | null
           events_url: string
+          forfeit: boolean | null
           game_id: number
           home_goals: number | null
           home_id: string
@@ -84,6 +85,7 @@ export type Database = {
           away_name: string
           created_at?: string | null
           events_url: string
+          forfeit?: boolean | null
           game_id: number
           home_goals?: number | null
           home_id: string
@@ -101,6 +103,7 @@ export type Database = {
           away_name?: string
           created_at?: string | null
           events_url?: string
+          forfeit?: boolean | null
           game_id?: number
           home_goals?: number | null
           home_id?: string
@@ -116,20 +119,29 @@ export type Database = {
       leaderboard: {
         Row: {
           created_at: string
-          id: number
+          first_name: string | null
+          id: string
+          last_name: string | null
           points: number | null
+          user_id: number | null
           username: string | null
         }
         Insert: {
           created_at?: string
-          id: number
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
           points?: number | null
+          user_id?: number | null
           username?: string | null
         }
         Update: {
           created_at?: string
-          id?: number
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
           points?: number | null
+          user_id?: number | null
           username?: string | null
         }
         Relationships: []
@@ -152,17 +164,64 @@ export type Database = {
         }
         Relationships: []
       }
+      next_round: {
+        Row: {
+          away: string | null
+          away_id: number | null
+          away_logo: string | null
+          date: string | null
+          game_id: number
+          home: string | null
+          home_id: number | null
+          home_logo: string | null
+          id: string
+          round: number | null
+          score: string | null
+          time: string | null
+        }
+        Insert: {
+          away?: string | null
+          away_id?: number | null
+          away_logo?: string | null
+          date?: string | null
+          game_id: number
+          home?: string | null
+          home_id?: number | null
+          home_logo?: string | null
+          id?: string
+          round?: number | null
+          score?: string | null
+          time?: string | null
+        }
+        Update: {
+          away?: string | null
+          away_id?: number | null
+          away_logo?: string | null
+          date?: string | null
+          game_id?: number
+          home?: string | null
+          home_id?: number | null
+          home_logo?: string | null
+          id?: string
+          round?: number | null
+          score?: string | null
+          time?: string | null
+        }
+        Relationships: []
+      }
       predictions: {
         Row: {
           awarded: boolean
           away_goals: number | null
           away_team: string | null
           created_at: string
+          first_name: string | null
           game_id: number | null
           game_result: string | null
           home_goals: number | null
           home_team: string | null
           id: string
+          last_name: string | null
           round: number | null
           status: Database["public"]["Enums"]["status"] | null
           user_id: number | null
@@ -173,11 +232,13 @@ export type Database = {
           away_goals?: number | null
           away_team?: string | null
           created_at?: string
+          first_name?: string | null
           game_id?: number | null
           game_result?: string | null
           home_goals?: number | null
           home_team?: string | null
           id?: string
+          last_name?: string | null
           round?: number | null
           status?: Database["public"]["Enums"]["status"] | null
           user_id?: number | null
@@ -188,13 +249,45 @@ export type Database = {
           away_goals?: number | null
           away_team?: string | null
           created_at?: string
+          first_name?: string | null
           game_id?: number | null
           game_result?: string | null
           home_goals?: number | null
           home_team?: string | null
           id?: string
+          last_name?: string | null
           round?: number | null
           status?: Database["public"]["Enums"]["status"] | null
+          user_id?: number | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      tmp_import: {
+        Row: {
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          points: number | null
+          user_id: number | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          points?: number | null
+          user_id?: number | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          points?: number | null
           user_id?: number | null
           username?: string | null
         }
@@ -205,7 +298,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_leaderboard_by_points: {
+        Args:
+          | Record<PropertyKey, never>
+          | { page?: number }
+          | { page?: number; page_size?: number }
+        Returns: Json
+      }
     }
     Enums: {
       status: "score" | "difference" | "winner"

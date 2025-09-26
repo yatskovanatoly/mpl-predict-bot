@@ -12,8 +12,10 @@ export async function getCurrentRound(): Promise<Game[]> {
 	return data
 }
 
-export async function getLeaderboardGrouped(): Promise<any> {
-	const { data, error } = await supabase.rpc('get_leaderboard_by_points')
+export async function getLeaderboardGrouped(page = 1): Promise<any> {
+	const { data, error } = await supabase.rpc('get_leaderboard_by_points', {
+		page,
+	})
 
 	if (error) throw error
 	return data
