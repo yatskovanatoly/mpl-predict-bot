@@ -7,14 +7,19 @@ import { Game } from '../lib/types.ts'
 export const buildMainMenu = async (ctx: MyContext, games: Game[]) => {
 	const kb = new InlineKeyboard()
 	const isPastMatchDay = new Date(games[0].date) <= addHours(new Date(), 3)
-
-	kb.text(ctx.t(isPastMatchDay ? 'predict_my' : 'predict'), 'predict').row()
-
 	const prevRound = games[0].round - 1
+	const usersPredictions = await getPredictionsByUser(ctx.from!.id, prevRound) || []
+
+	kb.text(
+		ctx.t(
+			isPastMatchDay || usersPredictions.length === games.length
+				? 'predict_my'
+				: 'predict'
+		),
+		'predict'
+	).row()
 
 	if (games[0].round > 1) {
-		const usersPredictions = await getPredictionsByUser(ctx.from!.id, prevRound)
-
 		if (usersPredictions.length)
 			kb.text(ctx.t('prev', { n: prevRound }), 'prev').row()
 	}
