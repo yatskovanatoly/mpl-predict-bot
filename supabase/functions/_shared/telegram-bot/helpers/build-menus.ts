@@ -1,5 +1,5 @@
-import { InlineKeyboard } from 'https://deno.land/x/grammy@v1.38.1/mod.ts'
-import { addHours } from 'npm:date-fns'
+import { InlineKeyboard } from 'grammy'
+import { addHours } from 'date-fns'
 import { MyContext } from '../bot/index.ts'
 import { getPredictionsByUser, PredictionRow } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
@@ -8,7 +8,8 @@ export const buildMainMenu = async (ctx: MyContext, games: Game[]) => {
 	const kb = new InlineKeyboard()
 	const isPastMatchDay = new Date(games[0].date) <= addHours(new Date(), 3)
 	const prevRound = games[0].round - 1
-	const usersPredictions = await getPredictionsByUser(ctx.from!.id, prevRound) || []
+	const usersPredictions =
+		(await getPredictionsByUser(ctx.from!.id, prevRound)) || []
 
 	kb.text(
 		ctx.t(
