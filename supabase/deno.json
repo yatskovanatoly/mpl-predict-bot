@@ -7,7 +7,7 @@
 		"@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.56.0",
 		"@grammyjs/storage-free": "npm:@grammyjs/storage-free",
 		"date-fns": "npm:date-fns@^4.1.0",
-		"grammy": "https://deno.land/x/grammy@v1.38.1/mod.ts",
+		"grammy": "https://deno.land/x/grammy@v1.38.3/mod.ts",
 		"storage-supabase": "npm:@grammyjs/storage-supabase"
 	},
 	"lint": {
