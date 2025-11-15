@@ -18,6 +18,7 @@
     "jsr:@supabase/functions-js@^2.4.5": "2.4.5",
     "jsr:@supabase/supabase-js@*": "2.56.0",
     "jsr:@supabase/supabase-js@2": "2.56.0",
+    "jsr:@supabase/supabase-js@^2.56.0": "2.56.0",
     "npm:@grammyjs/i18n@*": "1.1.2_grammy@1.38.1",
     "npm:@grammyjs/i18n@^1.1.2": "1.1.2_grammy@1.38.1",
     "npm:@grammyjs/storage-free@*": "2.5.1",
@@ -31,6 +32,8 @@
     "npm:@supabase/storage-js@^2.10.4": "2.11.0",
     "npm:@types/node@*": "24.2.0",
     "npm:date-fns@*": "4.1.0",
+    "npm:date-fns@^4.1.0": "4.1.0",
+    "npm:grammy@^1.38.3": "1.38.3",
     "npm:openai@^4.52.5": "4.104.0"
   },
   "jsr": {
@@ -84,7 +87,10 @@
       ]
     },
     "@supabase/functions-js@2.4.5": {
-      "integrity": "ead2df253fe0c3b0b682c5f25076978ab62c10afff4d04222451a90ba512c394"
+      "integrity": "ead2df253fe0c3b0b682c5f25076978ab62c10afff4d04222451a90ba512c394",
+      "dependencies": [
+        "npm:openai"
+      ]
     },
     "@supabase/supabase-js@2.56.0": {
       "integrity": "bbf765032e9f3a626441e03c93f7e73f10709fc0caf8912462067030a1576ef4",
@@ -121,7 +127,7 @@
         "@deno/shim-deno",
         "@fluent/bundle",
         "@fluent/langneg",
-        "grammy"
+        "grammy@1.38.1"
       ]
     },
     "@grammyjs/storage-free@2.5.1": {
@@ -138,6 +144,9 @@
     },
     "@grammyjs/types@3.22.1": {
       "integrity": "sha512-QJX0Y8lpjE+/nuTKGmxybKmvdrLHV7gqbhI/UXoWlJLWtowbwk+oW+ngfHKwegD+ewL2SX8+tQo/1E14Ma0qlw=="
+    },
+    "@grammyjs/types@3.22.2": {
+      "integrity": "sha512-uu7DX2ezhnBPozL3bXHmwhLvaFsh59E4QyviNH4Cij7EdVekYrs6mCzeXsa2pDk30l3uXo7DBahlZLzTPtpYZg=="
     },
     "@supabase/auth-js@2.71.1": {
       "integrity": "sha512-mMIQHBRc+SKpZFRB2qtupuzulaUhFYupNyxqDj5Jp/LyPvcWvjaJzZzObv6URtL/O6lPxkanASnotGtNpS3H2Q==",
@@ -254,6 +263,12 @@
         "ms"
       ]
     },
+    "debug@4.4.3": {
+      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
+      "dependencies": [
+        "ms"
+      ]
+    },
     "delayed-stream@1.0.0": {
       "integrity": "sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ=="
     },
@@ -340,9 +355,18 @@
     "grammy@1.38.1": {
       "integrity": "sha512-aVBMeyYUjZ+rUEI+aV0T4himboXGs8Uf57c+vhtmHplPfgaRT04dyT9pG8R/GAmKeTUPh84GKO0u9IvaEGN6RA==",
       "dependencies": [
-        "@grammyjs/types",
+        "@grammyjs/types@3.22.1",
         "abort-controller",
-        "debug",
+        "debug@4.4.1",
+        "node-fetch"
+      ]
+    },
+    "grammy@1.38.3": {
+      "integrity": "sha512-1eQwNfxrRQ0JOFqd3n1nKqyWkHvCQRCNiH8e5aYm27mIjGPobgss58XN8GORC2ejAWM2+NSdUknrMhYj87cjGg==",
+      "dependencies": [
+        "@grammyjs/types@3.22.2",
+        "abort-controller",
+        "debug@4.4.3",
         "node-fetch"
       ]
     },
@@ -513,7 +537,10 @@
       "jsr:@supabase/functions-js@^2.4.5",
       "jsr:@supabase/supabase-js@^2.56.0",
       "npm:@grammyjs/i18n@^1.1.2",
-      "npm:@grammyjs/storage-free@*"
+      "npm:@grammyjs/storage-free@*",
+      "npm:@grammyjs/storage-supabase@*",
+      "npm:date-fns@^4.1.0",
+      "npm:grammy@^1.38.3"
     ]
   }
 }

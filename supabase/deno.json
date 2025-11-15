@@ -5,7 +5,10 @@
 		"@mary/date-fns": "jsr:@mary/date-fns@^0.1.3",
 		"@supabase/functions-js": "jsr:@supabase/functions-js@^2.4.5",
 		"@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.56.0",
-		"@grammyjs/storage-free": "npm:@grammyjs/storage-free"
+		"@grammyjs/storage-free": "npm:@grammyjs/storage-free",
+		"date-fns": "npm:date-fns@^4.1.0",
+    "grammy": "npm:grammy@^1.38.3",
+    "storage-supabase": "npm:@grammyjs/storage-supabase"
 	},
 	"lint": {
 		"rules": {

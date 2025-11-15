@@ -1,3 +1,8 @@
+import { I18n, type I18nFlavor } from '@grammyjs/i18n'
+import { createClient, PostgrestError } from '@supabase/supabase-js'
+import { addDays } from 'date-fns/addDays'
+import { addHours } from 'date-fns/addHours'
+import { differenceInDays } from 'date-fns/differenceInDays'
 import {
 	Bot,
 	Context,
@@ -5,12 +10,8 @@ import {
 	InlineKeyboard,
 	session,
 	SessionFlavor,
-} from 'https://deno.land/x/grammy@v1.38.1/mod.ts'
-import { PostgrestError } from 'jsr:@supabase/supabase-js'
-import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n'
-import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase'
-import { addDays, addHours, differenceInDays } from 'npm:date-fns'
+} from 'grammy'
+import { supabaseAdapter } from 'storage-supabase'
 import { buildMatchMessage } from '../helpers/build-match-message.ts'
 import {
 	buildEditMenu,
@@ -18,6 +19,7 @@ import {
 	buildMenuButton,
 	buildRoundMenu,
 } from '../helpers/build-menus.ts'
+import ensurePredictionsOpen from '../helpers/ensure-predictions-open.ts'
 import { handleLeaderboard } from '../helpers/handle-leaderboard.ts'
 import { parseGameId } from '../helpers/parse-game-id.ts'
 import { parseScore } from '../helpers/parse-score.ts'
@@ -233,6 +235,7 @@ bot.on('callback_query:data', async (ctx) => {
 	}
 
 	if (data === 'edit') {
+		if (await ensurePredictionsOpen(ctx, games)) return
 		const usersPredictions = await getPredictionsByUser(
 			ctx.from!.id,
 			games[0].round
@@ -244,6 +247,7 @@ bot.on('callback_query:data', async (ctx) => {
 	}
 
 	if (data.startsWith('edit_')) {
+		if (await ensurePredictionsOpen(ctx, games)) return
 		const game = games.find((game: Game) => game.game_id === parseGameId(data))
 
 		ctx.session.game = game
