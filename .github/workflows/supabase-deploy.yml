@@ -8,8 +8,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      SUPABASE_ACCESS_TOKEN: YOUR_SUPABASE_ACCESS_TOKEN
-      PROJECT_ID: YOUR_SUPABASE_PROJECT_ID
+      SUPABASE_ACCESS_TOKEN: $SUPABASE_ACCESS_TOKEN
+      PROJECT_ID: $PROJECT_ID
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
