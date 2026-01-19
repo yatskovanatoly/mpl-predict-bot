@@ -10,27 +10,17 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install Supabase CLI
-        uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v1
         with:
           version: latest
-
-      - name: Auth Supabase
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: supabase login --token "$SUPABASE_ACCESS_TOKEN"
 
       - name: Link project
         run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
@@ -38,16 +28,19 @@ jobs:
       - name: Detect changed functions
         id: changes
         run: |
-          CHANGED_FUNCTIONS=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} \
-            | grep '^supabase/functions/' \
-            | cut -d/ -f3 \
-            | sort -u)
+          FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} || true)
 
-          echo "Changed functions:"
-          echo "$CHANGED_FUNCTIONS"
+          if echo "$FILES" | grep -q '^supabase/functions/_shared/'; then
+            FUNCTIONS=$(ls supabase/functions | grep -v '^_shared$')
+          else
+            FUNCTIONS=$(echo "$FILES" \
+              | grep '^supabase/functions/' \
+              | cut -d/ -f3 \
+              | sort -u)
+          fi
 
           echo "functions<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED_FUNCTIONS" >> $GITHUB_OUTPUT
+          echo "$FUNCTIONS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Deploy changed functions
