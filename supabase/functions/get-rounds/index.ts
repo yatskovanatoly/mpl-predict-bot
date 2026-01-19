@@ -1,6 +1,5 @@
-import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
-import { DOMParser } from 'jsr:@b-fuze/deno-dom'
-import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { DOMParser } from "@b-fuze/deno-dom";
+import { createClient } from "@supabase/supabase-js";
 
 export const getRoundGames = async (html: string) => {
 	const doc = new DOMParser().parseFromString(html, 'text/html')

@@ -1,7 +1,7 @@
-import { Document, DOMParser } from 'jsr:@b-fuze/deno-dom'
-import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { parse } from 'npm:date-fns'
-import { ru } from 'npm:date-fns/locale'
+import { Document, DOMParser } from '@b-fuze/deno-dom'
+import { createClient } from '@supabase/supabase-js'
+import { parse } from 'date-fns'
+import { ru } from 'date-fns-locale'
 import { sanitizeTeamName } from '../_shared/telegram-bot/helpers/sanitize-team-name.ts'
 import { Game, RoundData } from '../_shared/telegram-bot/lib/types.ts'
 import { BASE_URL, MPL_ID } from '../_shared/telegram-bot/lib/urls.ts'
@@ -9,7 +9,7 @@ import { BASE_URL, MPL_ID } from '../_shared/telegram-bot/lib/urls.ts'
 const getDocument = async (roundN?: number): Promise<Document> => {
 	const response = await fetch(
 		`https://${BASE_URL}/championships/${MPL_ID}/games` +
-			`${roundN ? `?round=${roundN.toString()}` : ''}`
+			`${roundN ? `?round=${roundN.toString()}` : ''}`,
 	)
 	const html = await response.text()
 	const doc = new DOMParser().parseFromString(html, 'text/html')
@@ -97,7 +97,7 @@ Deno.serve(async () => {
 
 	const supabase = createClient(
 		Deno.env.get('SUPABASE_URL') ?? '',
-		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
 	)
 
 	const { data: existingCurrent } = await supabase
@@ -132,7 +132,7 @@ Deno.serve(async () => {
 			{
 				status: 500,
 				headers,
-			}
+			},
 		)
 	}
 	return new Response(
@@ -144,7 +144,7 @@ Deno.serve(async () => {
 		}),
 		{
 			headers,
-		}
+		},
 	)
 })
 
