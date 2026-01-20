@@ -9,6 +9,7 @@ on:
 
 jobs:
   deploy:
+    environment: production
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
