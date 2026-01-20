@@ -50,7 +50,5 @@ jobs:
         run: |
           for fn in ${{ steps.changes.outputs.functions }}; do
             echo "Deploying $fn"
-            supabase functions deploy "$fn" \
-              --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" \
-              --import-map "supabase/functions/$fn/deno.json"
+            supabase functions deploy "$fn"
           done
