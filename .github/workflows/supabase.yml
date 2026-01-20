@@ -51,6 +51,6 @@ jobs:
           functions="${{ steps.changes.outputs.functions }}"
           while IFS= read -r fn; do
             echo "Deploying $fn"
-            supabase functions deploy "$fn"
+            supabase functions deploy "$fn" --no-verify-jwt
           done <<< "$functions"
 
