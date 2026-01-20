@@ -4,6 +4,7 @@
     "jsr:@std/internal@^1.0.10": "1.0.10",
     "jsr:@std/path@1.1.2": "1.1.2",
     "jsr:@supabase/supabase-js@^2.56.0": "2.58.0",
+    "npm:@grammyjs/i18n@1.1.2": "1.1.2_grammy@1.39.3",
     "npm:@grammyjs/i18n@^1.1.2": "1.1.2_grammy@1.39.3",
     "npm:@grammyjs/storage-free@^2.5.1": "2.5.1",
     "npm:@grammyjs/storage-supabase@2.5.0": "2.5.0_@supabase+supabase-js@2.81.1",
