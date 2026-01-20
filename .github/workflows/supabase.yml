@@ -25,6 +25,8 @@ jobs:
 
       - name: Detect changed functions
         id: changes
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} || true)
 
