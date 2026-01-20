@@ -1,4 +1,4 @@
-import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n@^1.1.2'
+import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n@1.1.2';
 import { createClient, PostgrestError } from 'jsr:@supabase/supabase-js@^2.56.0'
 import { addDays } from 'npm:date-fns@4.1.0/addDays'
 import { addHours } from 'npm:date-fns@4.1.0/addHours'

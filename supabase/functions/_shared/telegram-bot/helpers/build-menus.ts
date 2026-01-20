@@ -1,5 +1,5 @@
-import { InlineKeyboard } from 'grammy'
-import { addHours } from 'date-fns'
+import { InlineKeyboard } from 'npm:grammy@1.39.3'
+import { addHours } from 'npm:date-fns@4.1.0/addHours'
 import { MyContext } from '../bot/index.ts'
 import { getPredictionsByUser, PredictionRow } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
@@ -72,6 +72,7 @@ export const buildEditMenu = (ctx: MyContext, games: PredictionRow[]) => {
 
 export const buildLeaderboardMenu = (
 	ctx: MyContext,
+	// deno-lint-ignore no-explicit-any
 	leaderboardGrouped: Record<string, any>
 ) => {
 	const kb = new InlineKeyboard()

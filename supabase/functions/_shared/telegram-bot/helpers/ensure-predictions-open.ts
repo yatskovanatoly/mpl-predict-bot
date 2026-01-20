@@ -1,4 +1,4 @@
-import { addHours } from 'date-fns'
+import { addHours } from 'npm:date-fns@4.1.0/addHours'
 import { MyContext } from '../bot/index.ts'
 import { Game } from '../lib/types.ts'
 import { buildMenuButton } from './build-menus.ts'
