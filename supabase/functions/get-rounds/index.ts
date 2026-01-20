@@ -29,7 +29,6 @@ export const getRoundGames = async (html: string) => {
 	for (const table of parentDiv.querySelectorAll('table.championship')) {
 		const stageEl = table.previousElementSibling
 		let round = 0
-    console.log(round)
 		if (
 			stageEl?.tagName === 'H1' &&
 			stageEl.getAttribute('name') === 'stage_name'
