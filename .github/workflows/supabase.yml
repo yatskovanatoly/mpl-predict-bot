@@ -22,7 +22,7 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: beta
+          version: latest
 
       - name: Link project
         run: supabase link --project-ref $PROJECT_ID
@@ -50,5 +50,5 @@ jobs:
         run: |
           for fn in ${{ steps.changes.outputs.functions }}; do
             echo "Deploying $fn"
-            supabase functions deploy "$fn"
+            supabase functions deploy "$fn" --import-map supabase/functions/"$fn"/deno.json
           done
