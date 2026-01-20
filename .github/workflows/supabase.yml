@@ -9,7 +9,7 @@ on:
 
 jobs:
   deploy:
-    environment: production
+    environment: Production – mpl-predict-bot
     runs-on: ubuntu-latest
 
     steps:
