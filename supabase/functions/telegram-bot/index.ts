@@ -1,4 +1,4 @@
-import { webhookCallback } from 'grammy'
+import { webhookCallback } from 'npm:grammy@^1.38.3'
 import { bot } from '../_shared/telegram-bot/bot/index.ts'
 
 const handleUpdate = webhookCallback(bot, 'std/http')
