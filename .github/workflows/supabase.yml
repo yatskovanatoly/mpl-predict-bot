@@ -43,6 +43,8 @@ jobs:
 
       - name: Deploy changed functions
         if: steps.changes.outputs.functions != ''
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           for fn in ${{ steps.changes.outputs.functions }}; do
             echo "Deploying $fn"
