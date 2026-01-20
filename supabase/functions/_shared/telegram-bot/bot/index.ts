@@ -1,40 +1,39 @@
+import { createClient, PostgrestError } from 'jsr:@supabase/supabase-js@^2.56.0';
 import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n@1.1.2';
-import { createClient, PostgrestError } from 'jsr:@supabase/supabase-js@^2.56.0'
-import { addDays } from 'npm:date-fns@4.1.0/addDays'
-import { addHours } from 'npm:date-fns@4.1.0/addHours'
-import { differenceInDays } from 'npm:date-fns@4.1.0/differenceInDays'
+import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase@2.5.0';
+import { addDays } from 'npm:date-fns@4.1.0/addDays';
+import { addHours } from 'npm:date-fns@4.1.0/addHours';
+import { differenceInDays } from 'npm:date-fns@4.1.0/differenceInDays';
 import {
-	Bot,
-	Context,
-	GrammyError,
-	InlineKeyboard,
-	session,
-	SessionFlavor,
-} from 'npm:grammy@^1.38.3'
-import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase@2.5.0'
-import { buildMatchMessage } from '../helpers/build-match-message.ts'
+  Bot,
+  Context,
+  GrammyError,
+  InlineKeyboard,
+  session,
+  SessionFlavor,
+} from 'npm:grammy@^1.38.3';
+import { buildMatchMessage } from '../helpers/build-match-message.ts';
 import {
-	buildEditMenu,
-	buildMainMenu,
-	buildMenuButton,
-	buildRoundMenu,
-} from '../helpers/build-menus.ts'
-import ensurePredictionsOpen from '../helpers/ensure-predictions-open.ts'
-import { handleLeaderboard } from '../helpers/handle-leaderboard.ts'
-import { parseGameId } from '../helpers/parse-game-id.ts'
-import { parseScore } from '../helpers/parse-score.ts'
+  buildEditMenu,
+  buildMainMenu,
+  buildMenuButton,
+  buildRoundMenu,
+} from '../helpers/build-menus.ts';
+import ensurePredictionsOpen from '../helpers/ensure-predictions-open.ts';
+import { handleLeaderboard } from '../helpers/handle-leaderboard.ts';
+import { parseGameId } from '../helpers/parse-game-id.ts';
+import { parseScore } from '../helpers/parse-score.ts';
 import {
-	getCurrentRound,
-	getNextRound,
-	getPredictionsByUser,
-	updateId,
-} from '../lib/supabase-client.ts'
-import { Game } from '../lib/types.ts'
-import ru from '../locales/ru.ts'
-import { formatUserPredictions } from './format-user-predictions.ts'
-import { gameResultIteratee } from './game-result-iteratee.ts'
-import { groupPredictionsByStatus } from './group-predictions-by-status.ts'
-import { saveUserPrediction } from './save-prediction.ts'
+  getCurrentRound,
+  getNextRound,
+  getPredictionsByUser
+} from '../lib/supabase-client.ts';
+import { Game } from '../lib/types.ts';
+import ru from '../locales/ru.ts';
+import { formatUserPredictions } from './format-user-predictions.ts';
+import { gameResultIteratee } from './game-result-iteratee.ts';
+import { groupPredictionsByStatus } from './group-predictions-by-status.ts';
+import { saveUserPrediction } from './save-prediction.ts';
 
 // const token = Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
 const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
@@ -81,10 +80,10 @@ bot
 		}),
 	)
 	// NB DEV
-	.use(async (ctx, next) => {
-		if (ctx.from) await updateId(ctx.from)
-		return next()
-	})
+	// .use(async (ctx, next) => {
+	// 	if (ctx.from) await updateId(ctx.from)
+	// 	return next()
+	// })
 
 bot.command('start', async (ctx) => {
 	ctx.session = {
