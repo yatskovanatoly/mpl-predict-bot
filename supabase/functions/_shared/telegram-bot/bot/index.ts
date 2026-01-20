@@ -1,8 +1,8 @@
-import { I18n, type I18nFlavor } from '@grammyjs/i18n'
-import { createClient, PostgrestError } from '@supabase/supabase-js'
-import { addDays } from 'date-fns/addDays'
-import { addHours } from 'date-fns/addHours'
-import { differenceInDays } from 'date-fns/differenceInDays'
+import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n@^1.1.2'
+import { createClient, PostgrestError } from 'jsr:@supabase/supabase-js@^2.56.0'
+import { addDays } from 'npm:date-fns@4.1.0/addDays'
+import { addHours } from 'npm:date-fns@4.1.0/addHours'
+import { differenceInDays } from 'npm:date-fns@4.1.0/differenceInDays'
 import {
 	Bot,
 	Context,
@@ -10,8 +10,8 @@ import {
 	InlineKeyboard,
 	session,
 	SessionFlavor,
-} from 'grammy'
-import { supabaseAdapter } from 'storage-supabase'
+} from 'npm:grammy@^1.38.3'
+import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase@2.5.0'
 import { buildMatchMessage } from '../helpers/build-match-message.ts'
 import {
 	buildEditMenu,
@@ -57,7 +57,7 @@ const games =
 		? currentGames
 		: nextGames
 
-const i18n = new I18n<any>({
+const i18n = new I18n<Context>({
 	defaultLocale: 'ru',
 })
 
@@ -74,10 +74,11 @@ bot
 				leaderboard: { page: 1, total_pages: 1 },
 			}),
 			storage: supabaseAdapter<SessionData>({
+				// deno-lint-ignore no-explicit-any
 				supabase: supabase as any,
 				table: 'memory',
 			}),
-		})
+		}),
 	)
 	// NB DEV
 	.use(async (ctx, next) => {
@@ -128,7 +129,7 @@ bot.callbackQuery('predict', async (ctx) => {
 
 	const usersPredictions = await getPredictionsByUser(
 		ctx.from.id,
-		games[0].round
+		games[0].round,
 	)
 
 	if (isPastMatchDay && !usersPredictions.length) {
@@ -139,7 +140,7 @@ bot.callbackQuery('predict', async (ctx) => {
 				games.map(gameResultIteratee).join('\n'),
 			{
 				reply_markup: buildMenuButton(ctx),
-			}
+			},
 		)
 	}
 
@@ -148,7 +149,7 @@ bot.callbackQuery('predict', async (ctx) => {
 
 	games.forEach((game: Game) => {
 		const hasPrediction = usersPredictions.some(
-			(p) => p.game_id === game.game_id
+			(p) => p.game_id === game.game_id,
 		)
 		if (hasPrediction) {
 			gamesWithPrediction.push(game)
@@ -174,8 +175,8 @@ bot.callbackQuery('predict', async (ctx) => {
 	const footer = isPastMatchDay
 		? ctx.t('prediction_closed')
 		: gamesWithoutPrediction.length
-		? ctx.t('match_select')
-		: ''
+			? ctx.t('match_select')
+			: ''
 
 	const text = `${header}\n\n${body}\n\n${footer}`
 
@@ -183,8 +184,8 @@ bot.callbackQuery('predict', async (ctx) => {
 		? buildRoundMenu(
 				ctx,
 				games,
-				usersPredictions.map((p) => p.game_id)
-		  )
+				usersPredictions.map((p) => p.game_id),
+			)
 		: buildMenuButton(ctx)
 
 	try {
@@ -225,7 +226,7 @@ bot.on('callback_query:data', async (ctx) => {
 	if (data === 'prev') {
 		const usersPredictions = await getPredictionsByUser(
 			ctx.from!.id,
-			games[0].round - 1
+			games[0].round - 1,
 		)
 		const grouped = groupPredictionsByStatus(usersPredictions)
 		const predictionsList = formatUserPredictions(grouped, ctx)
@@ -238,7 +239,7 @@ bot.on('callback_query:data', async (ctx) => {
 		if (await ensurePredictionsOpen(ctx, games)) return
 		const usersPredictions = await getPredictionsByUser(
 			ctx.from!.id,
-			games[0].round
+			games[0].round,
 		)
 		ctx.editMessageText(ctx.t('choose_edit_match'), {
 			reply_markup: buildEditMenu(ctx, usersPredictions),
@@ -271,7 +272,7 @@ bot.on('message:text', async (ctx) => {
 				home,
 				away,
 				score,
-				round
+				round,
 			).then(async () => {
 				await ctx.reply(
 					ctx.t('prediction_made', {
@@ -281,10 +282,10 @@ bot.on('message:text', async (ctx) => {
 						homeGoals,
 						awayGoals,
 					}),
-					{ parse_mode: 'MarkdownV2' }
+					{ parse_mode: 'MarkdownV2' },
 				)
 				const predicted = await getPredictionsByUser(ctx.from.id, round).then(
-					(data) => data.map((p) => p.game_id)
+					(data) => data.map((p) => p.game_id),
 				)
 				const title =
 					predicted.length < games.length
@@ -305,7 +306,7 @@ bot.on('message:text', async (ctx) => {
 				}),
 				{
 					parse_mode: 'HTML',
-				}
+				},
 			)
 		}
 	}

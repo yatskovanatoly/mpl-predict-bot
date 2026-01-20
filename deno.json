@@ -6,5 +6,6 @@
 	},
 	"tasks": {
 		"dev": "deno -EIN --env=.env ./supabase/functions/_shared/telegram-bot/bot/index.ts"
-	}
+	},
+	"nodeModulesDir": "auto"
 }
