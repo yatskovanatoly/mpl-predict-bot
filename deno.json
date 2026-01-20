@@ -1,0 +1,10 @@
+{
+	"lint": {
+		"rules": {
+			"exclude": ["no-explicit-any"]
+		}
+	},
+	"tasks": {
+		"dev": "deno -EIN --env=.env ./supabase/functions/_shared/telegram-bot/bot/index.ts"
+	}
+}
