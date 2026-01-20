@@ -48,7 +48,9 @@ jobs:
       - name: Deploy changed functions
         if: steps.changes.outputs.functions != ''
         run: |
-          for fn in ${{ steps.changes.outputs.functions }}; do
+          functions="${{ steps.changes.outputs.functions }}"
+          while IFS= read -r fn; do
             echo "Deploying $fn"
             supabase functions deploy "$fn"
-          done
+          done <<< "$functions"
+
