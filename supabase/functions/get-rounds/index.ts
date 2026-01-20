@@ -1,5 +1,5 @@
-import { DOMParser } from "@b-fuze/deno-dom";
-import { createClient } from "@supabase/supabase-js";
+import { DOMParser } from "deno-dom";
+import { createClient } from "supabase";
 
 export const getRoundGames = async (html: string) => {
 	const doc = new DOMParser().parseFromString(html, 'text/html')

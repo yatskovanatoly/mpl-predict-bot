@@ -1,7 +1,7 @@
 {
 	"imports": {
-		"@b-fuze/deno-dom": "jsr:@b-fuze/deno-dom@^0.1.56",
-		"@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.56.0"
+		"deno-dom": "jsr:@b-fuze/deno-dom@^0.1.56",
+		"supabase": "jsr:@supabase/supabase-js@^2.56.0"
 	},
 	"lint": {
 		"rules": {

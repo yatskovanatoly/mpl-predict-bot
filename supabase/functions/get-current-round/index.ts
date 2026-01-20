@@ -1,5 +1,5 @@
-import { Document, DOMParser } from '@b-fuze/deno-dom'
-import { createClient } from '@supabase/supabase-js'
+import { Document, DOMParser } from 'deno-dom'
+import { createClient } from 'supabase'
 import { parse } from 'date-fns'
 import { ru } from 'date-fns-locale'
 import { sanitizeTeamName } from '../_shared/telegram-bot/helpers/sanitize-team-name.ts'
