@@ -26,7 +26,8 @@ import { parseScore } from '../helpers/parse-score.ts';
 import {
   getCurrentRound,
   getNextRound,
-  getPredictionsByUser
+  getPredictionsByUser,
+  updateId
 } from '../lib/supabase-client.ts';
 import { Game } from '../lib/types.ts';
 import ru from '../locales/ru.ts';
@@ -80,10 +81,10 @@ bot
 		}),
 	)
 	// NB DEV
-	// .use(async (ctx, next) => {
-	// 	if (ctx.from) await updateId(ctx.from)
-	// 	return next()
-	// })
+	.use(async (ctx, next) => {
+		if (ctx.from) await updateId(ctx.from)
+		return next()
+	})
 
 bot.command('start', async (ctx) => {
 	ctx.session = {
