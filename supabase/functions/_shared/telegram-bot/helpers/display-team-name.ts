@@ -11,7 +11,7 @@ const TEAM_NAME_MAP: Record<string, string> = {
 	'bedros pilibos': '🇷🇴 Bedros Pilibos',
 	щит: '💩 Щит',
 	beamish: '☘️ Beamish',
-	други: '🥛  Други',
+	други: '🥛 Други',
 	'вечер пятницы': '🌆 Вечер Пятницы',
 }
 

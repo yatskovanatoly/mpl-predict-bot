@@ -1,5 +1,6 @@
 import { DOMParser } from "jsr:@b-fuze/deno-dom@0.1.56";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { sanitizeTeamName } from "../_shared/telegram-bot/helpers/sanitize-team-name.ts";
 
 const MPL_ID = '202'
 const RU_MONTHS: Record<string, string> = {
@@ -95,10 +96,10 @@ export const getRoundGames = async (html: string) => {
 				game_id,
 				time,
 				home_id: row.querySelector('td.home')?.getAttribute('name') ?? '',
-				home_name: homeEl?.textContent.trim() ?? '',
+				home_name: sanitizeTeamName(homeEl?.textContent.trim() ?? ''),
 				home_logo: homeImg?.getAttribute('src') ?? '',
 				away_id: row.querySelector('td.away')?.getAttribute('name') ?? '',
-				away_name: awayEl?.textContent.trim() ?? '',
+				away_name: sanitizeTeamName(awayEl?.textContent.trim() ?? ''),
 				away_logo: awayImg?.getAttribute('src') ?? '',
 				home_goals: parseGoal(homeGoalsRaw),
 				away_goals: parseGoal(awayGoalsRaw),

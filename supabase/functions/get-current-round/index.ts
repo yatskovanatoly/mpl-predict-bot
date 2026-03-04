@@ -1,9 +1,10 @@
 import { Document, DOMParser } from 'jsr:@b-fuze/deno-dom@0.1.56'
-import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import { isValid } from 'npm:date-fns@^4.1.0/isValid'
 import { parse } from 'npm:date-fns@^4.1.0'
 import { ru } from 'npm:date-fns@^4.1.0/locale'
 import { sanitizeTeamName } from '../_shared/telegram-bot/helpers/sanitize-team-name.ts'
+import { Database } from '../_shared/telegram-bot/database.types.ts'
 import { Game, RoundData } from '../_shared/telegram-bot/lib/types.ts'
 import { BASE_URL, MPL_ID } from '../_shared/telegram-bot/lib/urls.ts'
 
@@ -28,9 +29,17 @@ const parseSeasonCode = (text: string) => {
 		/(январь|февраль|март|апрель|май|июнь|июль|август|сентябрь|октябрь|ноябрь|декабрь)\s+(\d{4})\s*[—-]\s*(январь|февраль|март|апрель|май|июнь|июль|август|сентябрь|октябрь|ноябрь|декабрь)\s+(\d{4})/,
 	)
 	if (!match) return null
-	const [, startMonth, startYear, endMonth, endYear] = match
-	const start = `${RU_MONTHS[startMonth]}-${startYear}`
-	const end = `${RU_MONTHS[endMonth]}-${endYear}`
+	const startMonth = match[1]
+	const startYear = match[2]
+	const endMonth = match[3]
+	const endYear = match[4]
+	if (!startMonth || !startYear || !endMonth || !endYear) return null
+
+	const startMonthNum = RU_MONTHS[startMonth]
+	const endMonthNum = RU_MONTHS[endMonth]
+	if (!startMonthNum || !endMonthNum) return null
+	const start = `${startMonthNum}-${startYear}`
+	const end = `${endMonthNum}-${endYear}`
 	return `${start}, ${end}`
 }
 
@@ -52,7 +61,7 @@ const inferRoundDate = (
 		.map((year) =>
 			parse(`${dateText} ${year}`, 'd MMMM, EEEE yyyy', referenceDate, {
 				locale: ru,
-			})
+			}),
 		)
 		.filter((date) => isValid(date))
 
@@ -64,14 +73,18 @@ const inferRoundDate = (
 		const futureOrSame = candidates
 			.filter((date) => date.getTime() >= fromTs)
 			.sort((a, b) => a.getTime() - b.getTime())
-		if (futureOrSame.length) return futureOrSame[0]
+		const firstFuture = futureOrSame.at(0)
+		if (firstFuture) return firstFuture
 	}
 
-	return candidates.sort((a, b) => {
-		const aDelta = Math.abs(a.getTime() - referenceDate.getTime())
-		const bDelta = Math.abs(b.getTime() - referenceDate.getTime())
-		return aDelta - bDelta
-	})[0]
+	const nearest = candidates
+		.sort((a, b) => {
+			const aDelta = Math.abs(a.getTime() - referenceDate.getTime())
+			const bDelta = Math.abs(b.getTime() - referenceDate.getTime())
+			return aDelta - bDelta
+		})
+		.at(0)
+	return nearest ?? referenceDate
 }
 
 const getDocument = async (roundN?: number): Promise<Document> => {
@@ -93,9 +106,11 @@ const getCurrentRound = async (
 	const doc = await getDocument(roundN)
 	const season = getSeasonFromDocument(doc)
 
-	const date = doc.querySelector('.category2')?.textContent.trim() ?? ''
+	const date = doc.querySelector('.category2')?.textContent?.trim() ?? ''
 	const roundText =
-		doc.querySelector('.current')?.textContent?.trim() ?? roundN?.toString() ?? '0'
+		doc.querySelector('.current')?.textContent?.trim() ??
+		roundN?.toString() ??
+		'0'
 	const round = Number(roundText.match(/\d+/)?.[0] ?? roundN ?? 0)
 	const roundDate = inferRoundDate(date, new Date(), dateOptions)
 
@@ -108,7 +123,7 @@ const getCurrentRound = async (
 			const idAttr = parent.getAttribute('id')
 			if (!idAttr) return
 			const game_id = Number(idAttr.replace('game_', ''))
-			const time = parent.querySelector('.date')?.textContent.trim() ?? ''
+			const time = parent.querySelector('.date')?.textContent?.trim() ?? ''
 
 			const game: Game = {
 				game_id,
@@ -163,7 +178,7 @@ const getCurrentRound = async (
 }
 
 const syncRoundTable = async (
-	supabase: ReturnType<typeof createClient>,
+	supabase: SupabaseClient<Database>,
 	table: 'current_round' | 'next_round',
 	games: RoundData,
 ) => {
@@ -173,16 +188,35 @@ const syncRoundTable = async (
 	}
 
 	const ids = games.map((game) => game.game_id)
-	await supabase.from(table).delete().not('game_id', 'in', `(${ids.join(',')})`)
+	await supabase
+		.from(table)
+		.delete()
+		.not('game_id', 'in', `(${ids.join(',')})`)
+
+	type RoundInsert = Database['public']['Tables']['current_round']['Insert']
+	const payload: RoundInsert[] = games.map((game) => ({
+		...game,
+		home_id: Number.isFinite(Number(game.home_id))
+			? Number(game.home_id)
+			: null,
+		away_id: Number.isFinite(Number(game.away_id))
+			? Number(game.away_id)
+			: null,
+		home_logo: game.home_logo ?? null,
+		away_logo: game.away_logo ?? null,
+		date: game.date.toISOString(),
+		time: game.time ?? null,
+		season: game.season || null,
+	}))
 
 	return await supabase
 		.from(table)
-		.upsert(games, { onConflict: 'game_id' })
+		.upsert(payload, { onConflict: 'game_id' })
 		.select()
 }
 
 const ensureSeason = async (
-	supabase: ReturnType<typeof createClient>,
+	supabase: SupabaseClient<Database>,
 	seasonCode?: string,
 ) => {
 	if (!seasonCode) return
@@ -198,7 +232,8 @@ const ensureSeason = async (
 
 Deno.serve(async () => {
 	const games = await getCurrentRound()
-	if (!games.length) {
+	const currentRoundFirst = games.at(0)
+	if (!currentRoundFirst) {
 		return new Response(
 			JSON.stringify({
 				error: 'Failed to scrape current round games',
@@ -210,17 +245,18 @@ Deno.serve(async () => {
 		)
 	}
 
-	const nextGames = await getCurrentRound(games[0].round + 1, {
-		preferOnOrAfter: new Date(games[0].date),
+	const nextGames = await getCurrentRound(currentRoundFirst.round + 1, {
+		preferOnOrAfter: new Date(currentRoundFirst.date),
 	})
 
-	const supabase = createClient(
+	const supabase = createClient<Database>(
 		Deno.env.get('SUPABASE_URL') ?? '',
 		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
 	)
-	await ensureSeason(supabase, games[0].season)
-	if (nextGames[0]?.season) {
-		await ensureSeason(supabase, nextGames[0].season)
+	await ensureSeason(supabase, currentRoundFirst.season)
+	const nextRoundFirst = nextGames.at(0)
+	if (nextRoundFirst?.season) {
+		await ensureSeason(supabase, nextRoundFirst.season)
 	}
 
 	const current_round = await syncRoundTable(supabase, 'current_round', games)
