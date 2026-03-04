@@ -8,7 +8,7 @@ const TEAM_NAME_MAP: Record<string, string> = {
 	'черные но синие': '🍆 чёрные но синие',
 	ракета: '🚀 ракета',
 	'душевой флирт': '🚿 душевой флирт',
-	'bedros pilibos': '🇧🇬 bedros pilibos',
+	'bedros pilibos': '🇷🇴 bedros pilibos',
 	щит: '💩 щит',
 	beamish: '☘️ бимиш',
 	други: '🥛 други',
