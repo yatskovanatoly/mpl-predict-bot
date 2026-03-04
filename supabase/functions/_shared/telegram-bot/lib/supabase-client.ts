@@ -109,6 +109,102 @@ export async function getPredictionsByUser(
 	return data
 }
 
+export async function getUserRoundsWithPredictions(
+	userId: number
+): Promise<number[]> {
+	if (!userId) return []
+	const { data, error } = await supabase
+		.from('predictions')
+		.select('round')
+		.eq('user_id', userId)
+		.not('round', 'is', null)
+		.order('round', { ascending: false })
+	if (error) throw error
+	const rounds = (data ?? [])
+		.map((row) => row.round)
+		.filter((round): round is number => typeof round === 'number')
+	return [...new Set(rounds)]
+}
+
+export async function getAllRoundsWithPredictions(): Promise<number[]> {
+	const { data, error } = await supabase
+		.from('predictions')
+		.select('round')
+		.not('round', 'is', null)
+		.order('round', { ascending: false })
+	if (error) throw error
+	const rounds = (data ?? [])
+		.map((row) => row.round)
+		.filter((round): round is number => typeof round === 'number')
+	return [...new Set(rounds)]
+}
+
+export async function getAllRoundsFromGames(): Promise<number[]> {
+	const { data: currentRoundRow } = await supabase
+		.from('current_round')
+		.select('round')
+		.not('round', 'is', null)
+		.limit(1)
+		.maybeSingle()
+
+	const currentRound =
+		typeof currentRoundRow?.round === 'number' ? currentRoundRow.round : null
+
+	const { data, error } = await supabase
+		.from('games')
+		.select('round')
+		.not('round', 'is', null)
+		.order('round', { ascending: false })
+	if (error) throw error
+	const rounds = (data ?? [])
+		.map((row) => row.round)
+		.filter((round): round is number => typeof round === 'number')
+	const uniqueRounds = [...new Set(rounds)]
+
+	if (currentRound === null) return uniqueRounds
+
+	// Keep full past history, but expose at most one future round.
+	return uniqueRounds.filter((round) => round <= currentRound + 1)
+}
+
+export async function getUsersWithPredictionsByRound(
+	round: number,
+	excludeUserId?: number
+): Promise<PredictionUserRow[]> {
+	if (!round) return []
+	let query = supabase
+		.from('predictions')
+		.select('user_id,username,first_name,last_name')
+		.eq('round', round)
+		.not('user_id', 'is', null)
+		.order('created_at', { ascending: true })
+
+	if (excludeUserId) {
+		query = query.neq('user_id', excludeUserId)
+	}
+
+	const { data, error } = await query
+	if (error) throw error
+
+	const users = (data ?? [])
+		.map((row) => ({
+			user_id: Number(row.user_id),
+			username: row.username,
+			first_name: row.first_name,
+			last_name: row.last_name,
+		}))
+		.filter((row) => Number.isFinite(row.user_id))
+
+	const seen = new Set<number>()
+	const unique: PredictionUserRow[] = []
+	for (const user of users) {
+		if (seen.has(user.user_id)) continue
+		seen.add(user.user_id)
+		unique.push(user)
+	}
+	return unique
+}
+
 export async function getAllPredictions(): Promise<PredictionRow[]> {
 	const { data, error } = await supabase
 		.from('predictions')
@@ -116,6 +212,36 @@ export async function getAllPredictions(): Promise<PredictionRow[]> {
 		.order('created_at', { ascending: false })
 	if (error) throw error
 	return data
+}
+
+export async function getPredictionsByRound(
+	round: number
+): Promise<PredictionRoundRow[]> {
+	if (!round) return []
+	const { data, error } = await supabase
+		.from('predictions')
+		.select('game_id,home_goals,away_goals')
+		.eq('round', round)
+		.not('game_id', 'is', null)
+		.not('home_goals', 'is', null)
+		.not('away_goals', 'is', null)
+	if (error) throw error
+	return (data ?? []).map((row) => ({
+		game_id: Number(row.game_id),
+		home_goals: Number(row.home_goals),
+		away_goals: Number(row.away_goals),
+	}))
+}
+
+export async function hasPredictionsByRound(round: number): Promise<boolean> {
+	if (!round) return false
+	const { data, error } = await supabase
+		.from('predictions')
+		.select('id')
+		.eq('round', round)
+		.limit(1)
+	if (error) throw error
+	return (data?.length ?? 0) > 0
 }
 
 // NB DEV
@@ -148,6 +274,9 @@ export type LeaderboardRow = {
 export type PredictionRow = {
 	id: string
 	user_id: string
+	username: string | null
+	first_name: string | null
+	last_name: string | null
 	home_team: string
 	away_team: string
 	home_goals: number
@@ -157,4 +286,17 @@ export type PredictionRow = {
 	round: number
 	game_result: Database['public']['Tables']['predictions']['Row']['game_result']
 	status: Database['public']['Tables']['predictions']['Row']['status']
+}
+
+export type PredictionUserRow = {
+	user_id: number
+	username: string | null
+	first_name: string | null
+	last_name: string | null
+}
+
+export type PredictionRoundRow = {
+	game_id: number
+	home_goals: number
+	away_goals: number
 }

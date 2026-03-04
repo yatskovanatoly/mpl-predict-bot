@@ -17,15 +17,21 @@ import {
   buildMainMenu,
   buildMenuButton,
   buildRoundMenu,
+  buildRoundsMenu,
+  buildUsersMenu,
 } from '../helpers/build-menus.ts';
 import ensurePredictionsOpen from '../helpers/ensure-predictions-open.ts';
 import { handleLeaderboard } from '../helpers/handle-leaderboard.ts';
 import { parseGameId } from '../helpers/parse-game-id.ts';
 import { parseScore } from '../helpers/parse-score.ts';
 import {
+  getAllRoundsFromGames,
   getCurrentRound,
   getNextRound,
+  getPredictionsByRound,
   getPredictionsByUser,
+  getUserRoundsWithPredictions,
+  getUsersWithPredictionsByRound,
   updateId
 } from '../lib/supabase-client.ts';
 import { Game } from '../lib/types.ts';
@@ -37,6 +43,8 @@ import { saveUserPrediction } from './save-prediction.ts';
 
 type AppEnv = 'development' | 'production'
 type BotMode = 'polling' | 'webhook'
+const ROUNDS_PAGE_SIZE = 10
+const OTHERS_USERS_PAGE_SIZE = 10
 
 const appEnv = (
 	Deno.env.get('APP_ENV') ??
@@ -89,6 +97,37 @@ const hasUpcomingRound = (games: Game[]) => {
 	if (Number.isNaN(matchDate.getTime())) return false
 	const daysDiff = differenceInDays(matchDate, addHours(new Date(), 3))
 	return daysDiff >= -1 && daysDiff <= 30
+}
+
+const formatDisplayName = ({
+	username,
+	first_name,
+	last_name,
+	user_id,
+}: {
+	username: string | null
+	first_name: string | null
+	last_name: string | null
+	user_id: number
+}) => {
+	if (username) return `@${username}`
+	const name = `${first_name ?? ''} ${last_name ?? ''}`.trim()
+	return name || `${user_id}`
+}
+
+const formatOutcomePercentages = (
+	homeWinCount: number,
+	drawCount: number,
+	awayWinCount: number,
+) => {
+	const total = homeWinCount + drawCount + awayWinCount
+	if (!total) {
+		return 'П1 0% • X 0% • П2 0% (0)'
+	}
+	const homePct = Math.round((homeWinCount / total) * 100)
+	const drawPct = Math.round((drawCount / total) * 100)
+	const awayPct = Math.max(0, 100 - homePct - drawPct)
+	return `П1 ${homePct}% • X ${drawPct}% • П2 ${awayPct}% (${total})`
 }
 
 const i18n = new I18n<Context>({
@@ -244,6 +283,9 @@ bot.on('callback_query:data', async (ctx) => {
 	}
 
 	if (data.startsWith('leaderboard')) await handleLeaderboard(ctx, data)
+	if (data.endsWith('noop')) {
+		return ctx.answerCallbackQuery()
+	}
 
 	if (data === 'menu') {
 		ctx.session = { game: undefined, leaderboard: { page: 1, total_pages: 1 } }
@@ -270,6 +312,240 @@ bot.on('callback_query:data', async (ctx) => {
 
 		ctx.editMessageText(predictionsList, { reply_markup: buildMenuButton(ctx) })
 		ctx.answerCallbackQuery()
+	}
+
+	if (data === 'my_rounds') {
+		const rounds = await getUserRoundsWithPredictions(ctx.from!.id)
+		await ctx.answerCallbackQuery()
+		if (!rounds.length) {
+			return ctx.editMessageText(ctx.t('no_rounds_with_predictions'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		return ctx.editMessageText(ctx.t('choose_round'), {
+			reply_markup: buildRoundsMenu(
+				ctx,
+				rounds,
+				'mr_',
+				1,
+				ROUNDS_PAGE_SIZE,
+			),
+		})
+	}
+
+	if (data.startsWith('mr_page_')) {
+		const page = Number(data.replace('mr_page_', ''))
+		const rounds = await getUserRoundsWithPredictions(ctx.from!.id)
+		await ctx.answerCallbackQuery()
+		if (!rounds.length) {
+			return ctx.editMessageText(ctx.t('no_rounds_with_predictions'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		return ctx.editMessageText(ctx.t('choose_round'), {
+			reply_markup: buildRoundsMenu(
+				ctx,
+				rounds,
+				'mr_',
+				Number.isFinite(page) ? page : 1,
+				ROUNDS_PAGE_SIZE,
+			),
+		})
+	}
+
+	if (data.startsWith('mr_')) {
+		const round = Number(data.replace('mr_', ''))
+		if (!Number.isFinite(round) || round <= 0) {
+			await ctx.answerCallbackQuery()
+			return ctx.editMessageText(ctx.t('fallback'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		const usersPredictions = await getPredictionsByUser(ctx.from!.id, round)
+		await ctx.answerCallbackQuery()
+		if (!usersPredictions.length) {
+			return ctx.editMessageText(ctx.t('no_predictions_for_round'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		const grouped = groupPredictionsByStatus(usersPredictions)
+		const predictionsList = formatUserPredictions(grouped, ctx)
+		const title = ctx.t('round_predictions', { n: round })
+		return ctx.editMessageText(`${title}\n\n${predictionsList}`, {
+			reply_markup: buildMenuButton(ctx),
+		})
+	}
+
+	if (data === 'others_rounds') {
+		const rounds = await getAllRoundsFromGames()
+		await ctx.answerCallbackQuery()
+		if (!rounds.length) {
+			return ctx.editMessageText(ctx.t('no_rounds_with_predictions'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		return ctx.editMessageText(ctx.t('choose_round'), {
+			reply_markup: buildRoundsMenu(
+				ctx,
+				rounds,
+				'or_',
+				1,
+				ROUNDS_PAGE_SIZE,
+			),
+		})
+	}
+
+	if (data === 'upcoming_percentages') {
+		const games = await getGamesForDisplay()
+		await ctx.answerCallbackQuery()
+		if (!games.length || !hasUpcomingRound(games)) {
+			return ctx.editMessageText(ctx.t('no_upcoming_games'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+
+		const round = games[0].round
+		const predictions = await getPredictionsByRound(round)
+		if (!predictions.length) {
+			return ctx.editMessageText(ctx.t('no_upcoming_predictions'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+
+		const lines = games.map((game) => {
+			let homeWinCount = 0
+			let drawCount = 0
+			let awayWinCount = 0
+
+			predictions.forEach((prediction) => {
+				if (prediction.game_id !== game.game_id) return
+				if (prediction.home_goals > prediction.away_goals) {
+					homeWinCount += 1
+				} else if (prediction.home_goals < prediction.away_goals) {
+					awayWinCount += 1
+				} else {
+					drawCount += 1
+				}
+			})
+
+			return `${game.home} – ${game.away}\n${formatOutcomePercentages(
+				homeWinCount,
+				drawCount,
+				awayWinCount,
+			)}`
+		})
+
+		const title = ctx.t('upcoming_percentages_title', { n: round })
+		const legend = ctx.t('percentages_legend')
+		return ctx.editMessageText(`${title}\n\n${lines.join('\n\n')}\n\n${legend}`, {
+			reply_markup: buildMenuButton(ctx),
+		})
+	}
+
+	if (data.startsWith('or_page_')) {
+		const page = Number(data.replace('or_page_', ''))
+		const rounds = await getAllRoundsFromGames()
+		await ctx.answerCallbackQuery()
+		if (!rounds.length) {
+			return ctx.editMessageText(ctx.t('no_rounds_with_predictions'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		return ctx.editMessageText(ctx.t('choose_round'), {
+			reply_markup: buildRoundsMenu(
+				ctx,
+				rounds,
+				'or_',
+				Number.isFinite(page) ? page : 1,
+				ROUNDS_PAGE_SIZE,
+			),
+		})
+	}
+
+	if (data.startsWith('or_')) {
+		const round = Number(data.replace('or_', ''))
+		if (!Number.isFinite(round) || round <= 0) {
+			await ctx.answerCallbackQuery()
+			return ctx.editMessageText(ctx.t('fallback'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		const users = await getUsersWithPredictionsByRound(round, ctx.from?.id)
+		await ctx.answerCallbackQuery()
+		if (!users.length) {
+			return ctx.editMessageText(ctx.t('no_users_for_round'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		return ctx.editMessageText(ctx.t('choose_user'), {
+			reply_markup: buildUsersMenu(
+				ctx,
+				users,
+				round,
+				1,
+				OTHERS_USERS_PAGE_SIZE,
+			),
+		})
+	}
+
+	if (data.startsWith('ou_page_')) {
+		const [, , roundRaw, pageRaw] = data.split('_')
+		const round = Number(roundRaw)
+		const page = Number(pageRaw)
+		if (!Number.isFinite(round) || round <= 0) {
+			await ctx.answerCallbackQuery()
+			return ctx.editMessageText(ctx.t('fallback'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		const users = await getUsersWithPredictionsByRound(round, ctx.from?.id)
+		await ctx.answerCallbackQuery()
+		if (!users.length) {
+			return ctx.editMessageText(ctx.t('no_users_for_round'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		return ctx.editMessageText(ctx.t('choose_user'), {
+			reply_markup: buildUsersMenu(
+				ctx,
+				users,
+				round,
+				Number.isFinite(page) ? page : 1,
+				OTHERS_USERS_PAGE_SIZE,
+			),
+		})
+	}
+
+	if (data.startsWith('ou_')) {
+		const [, roundRaw, userRaw] = data.split('_')
+		const round = Number(roundRaw)
+		const userId = Number(userRaw)
+		if (!Number.isFinite(round) || !Number.isFinite(userId) || round <= 0) {
+			await ctx.answerCallbackQuery()
+			return ctx.editMessageText(ctx.t('fallback'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		const usersPredictions = await getPredictionsByUser(userId, round)
+		await ctx.answerCallbackQuery()
+		if (!usersPredictions.length) {
+			return ctx.editMessageText(ctx.t('no_predictions_for_round'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+		const grouped = groupPredictionsByStatus(usersPredictions)
+		const predictionsList = formatUserPredictions(grouped, ctx)
+		const firstPrediction = usersPredictions[0]
+		const name = formatDisplayName({
+			username: firstPrediction.username ?? null,
+			first_name: firstPrediction.first_name ?? null,
+			last_name: firstPrediction.last_name ?? null,
+			user_id: userId,
+		})
+		const title = ctx.t('user_round_predictions', { name, n: round })
+		return ctx.editMessageText(`${title}\n\n${predictionsList}`, {
+			reply_markup: buildMenuButton(ctx),
+		})
 	}
 
 	if (data === 'edit') {
