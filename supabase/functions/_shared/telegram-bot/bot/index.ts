@@ -21,10 +21,10 @@ import {
   buildUsersMenu,
 } from '../helpers/build-menus.ts';
 import ensurePredictionsOpen from '../helpers/ensure-predictions-open.ts';
+import { displayTeamName } from '../helpers/display-team-name.ts';
 import { handleLeaderboard } from '../helpers/handle-leaderboard.ts';
 import { parseGameId } from '../helpers/parse-game-id.ts';
 import { parseScore } from '../helpers/parse-score.ts';
-import { sanitizeTeamName } from '../helpers/sanitize-team-name.ts';
 import {
   getAllRoundsFromGames,
   getCurrentRound,
@@ -436,7 +436,7 @@ bot.on('callback_query:data', async (ctx) => {
 				}
 			})
 
-			return `${sanitizeTeamName(game.home)} – ${sanitizeTeamName(game.away)}\n${formatOutcomePercentages(
+			return `${displayTeamName(game.home)} – ${displayTeamName(game.away)}\n${formatOutcomePercentages(
 				homeWinCount,
 				drawCount,
 				awayWinCount,

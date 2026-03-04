@@ -7,7 +7,7 @@ import {
 	PredictionRow,
 } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
-import { sanitizeTeamName } from './sanitize-team-name.ts'
+import { displayTeamName } from './display-team-name.ts'
 
 export const buildMainMenu = async (ctx: MyContext, games: Game[]) => {
 	const kb = new InlineKeyboard()
@@ -70,7 +70,7 @@ export const buildRoundMenu = (
 	games.forEach(({ game_id, home, away }) => {
 		if (!userPredictions.includes(game_id)) {
 			kb.text(
-				`${sanitizeTeamName(home)} — ${sanitizeTeamName(away)}`,
+				`${displayTeamName(home)} — ${displayTeamName(away)}`,
 				`game_${game_id}`
 			).row()
 		}
