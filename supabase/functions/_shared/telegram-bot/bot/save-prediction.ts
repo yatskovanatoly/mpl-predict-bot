@@ -7,7 +7,8 @@ export async function saveUserPrediction(
 	home: string,
 	away: string,
 	score: string,
-	round: number
+	round: number,
+	season: string
 ) {
 	const [homeGoalsStr, awayGoalsStr] = score.split('-')
 	const homeGoals = parseInt(homeGoalsStr!, 10)
@@ -24,6 +25,7 @@ export async function saveUserPrediction(
 		away,
 		homeGoals,
 		awayGoals,
-		round
+		round,
+		season
 	)
 }

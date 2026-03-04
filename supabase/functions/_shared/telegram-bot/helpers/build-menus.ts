@@ -21,10 +21,19 @@ export const buildMainMenu = async (ctx: MyContext, games: Game[]) => {
 	const isPastMatchDay = new Date(games[0].date) <= addHours(new Date(), 3)
 	const prevRound = games[0].round - 1
 	const currentRoundPredictions =
-		(await getPredictionsByUser(ctx.from!.id, games[0].round)) || []
+		(await getPredictionsByUser(
+			ctx.from!.id,
+			games[0].round,
+			games[0].season,
+		)) || []
 	const prevRoundPredictions =
-		prevRound > 0 ? await getPredictionsByUser(ctx.from!.id, prevRound) : []
-	const hasUpcomingPredictions = await hasPredictionsByRound(games[0].round)
+		prevRound > 0
+			? await getPredictionsByUser(ctx.from!.id, prevRound, games[0].season)
+			: []
+	const hasUpcomingPredictions = await hasPredictionsByRound(
+		games[0].round,
+		games[0].season,
+	)
 
 	kb.text(
 		ctx.t(

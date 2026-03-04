@@ -7,6 +7,41 @@ import { sanitizeTeamName } from '../_shared/telegram-bot/helpers/sanitize-team-
 import { Game, RoundData } from '../_shared/telegram-bot/lib/types.ts'
 import { BASE_URL, MPL_ID } from '../_shared/telegram-bot/lib/urls.ts'
 
+const RU_MONTHS: Record<string, string> = {
+	январь: '01',
+	февраль: '02',
+	март: '03',
+	апрель: '04',
+	май: '05',
+	июнь: '06',
+	июль: '07',
+	август: '08',
+	сентябрь: '09',
+	октябрь: '10',
+	ноябрь: '11',
+	декабрь: '12',
+}
+
+const parseSeasonCode = (text: string) => {
+	const normalized = text.toLowerCase().replace(/\s+/g, ' ').trim()
+	const match = normalized.match(
+		/(январь|февраль|март|апрель|май|июнь|июль|август|сентябрь|октябрь|ноябрь|декабрь)\s+(\d{4})\s*[—-]\s*(январь|февраль|март|апрель|май|июнь|июль|август|сентябрь|октябрь|ноябрь|декабрь)\s+(\d{4})/,
+	)
+	if (!match) return null
+	const [, startMonth, startYear, endMonth, endYear] = match
+	const start = `${RU_MONTHS[startMonth]}-${startYear}`
+	const end = `${RU_MONTHS[endMonth]}-${endYear}`
+	return `${start}, ${end}`
+}
+
+const getSeasonFromDocument = (doc: Document) => {
+	const seasonText =
+		doc.querySelector('.subheader a.link')?.textContent?.trim() ??
+		doc.querySelector('.subheader')?.textContent?.trim() ??
+		''
+	return parseSeasonCode(seasonText)
+}
+
 const inferRoundDate = (
 	dateText: string,
 	referenceDate = new Date(),
@@ -56,6 +91,7 @@ const getCurrentRound = async (
 ): Promise<RoundData> => {
 	const games: Game[] = []
 	const doc = await getDocument(roundN)
+	const season = getSeasonFromDocument(doc)
 
 	const date = doc.querySelector('.category2')?.textContent.trim() ?? ''
 	const roundText =
@@ -85,6 +121,7 @@ const getCurrentRound = async (
 				away_logo: undefined,
 				score: '',
 				date: roundDate,
+				season: season ?? '',
 			}
 
 			Array.from(row).forEach((child) => {
@@ -144,6 +181,21 @@ const syncRoundTable = async (
 		.select()
 }
 
+const ensureSeason = async (
+	supabase: ReturnType<typeof createClient>,
+	seasonCode?: string,
+) => {
+	if (!seasonCode) return
+	const { data: existing } = await supabase
+		.from('seasons')
+		.select('code')
+		.eq('code', seasonCode)
+		.limit(1)
+		.maybeSingle()
+	if (existing) return
+	await supabase.from('seasons').insert({ code: seasonCode, label: seasonCode })
+}
+
 Deno.serve(async () => {
 	const games = await getCurrentRound()
 	if (!games.length) {
@@ -166,6 +218,10 @@ Deno.serve(async () => {
 		Deno.env.get('SUPABASE_URL') ?? '',
 		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
 	)
+	await ensureSeason(supabase, games[0].season)
+	if (nextGames[0]?.season) {
+		await ensureSeason(supabase, nextGames[0].season)
+	}
 
 	const current_round = await syncRoundTable(supabase, 'current_round', games)
 	const next_round = await syncRoundTable(supabase, 'next_round', nextGames)

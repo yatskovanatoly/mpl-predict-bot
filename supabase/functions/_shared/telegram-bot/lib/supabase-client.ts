@@ -66,7 +66,8 @@ export async function createPrediction(
 	awayTeam: string,
 	homeGoals: number,
 	awayGoals: number,
-	round: number
+	round: number,
+	season: string
 ): Promise<PredictionRow> {
 	const { data, error } = await supabase
 		.from('predictions')
@@ -82,8 +83,9 @@ export async function createPrediction(
 				first_name: tgUser.first_name,
 				last_name: tgUser.last_name,
 				round,
+				season,
 			},
-			{ onConflict: 'game_id, user_id' }
+			{ onConflict: 'game_id, user_id,season' }
 		)
 		.select()
 		.single()
@@ -96,29 +98,35 @@ export async function createPrediction(
 
 export async function getPredictionsByUser(
 	userId: number,
-	round: number
+	round: number,
+	season?: string
 ): Promise<PredictionRow[]> {
 	if (!userId || !round) return []
-	const { data, error } = await supabase
+	let query = supabase
 		.from('predictions')
 		.select('*')
 		.eq('user_id', userId)
 		.eq('round', round)
 		.order('created_at', { ascending: false })
+	if (season) query = query.eq('season', season)
+	const { data, error } = await query
 	if (error) throw error
 	return data
 }
 
 export async function getUserRoundsWithPredictions(
-	userId: number
+	userId: number,
+	season?: string
 ): Promise<number[]> {
 	if (!userId) return []
-	const { data, error } = await supabase
+	let query = supabase
 		.from('predictions')
 		.select('round')
 		.eq('user_id', userId)
 		.not('round', 'is', null)
 		.order('round', { ascending: false })
+	if (season) query = query.eq('season', season)
+	const { data, error } = await query
 	if (error) throw error
 	const rounds = (data ?? [])
 		.map((row) => row.round)
@@ -142,19 +150,23 @@ export async function getAllRoundsWithPredictions(): Promise<number[]> {
 export async function getAllRoundsFromGames(): Promise<number[]> {
 	const { data: currentRoundRow } = await supabase
 		.from('current_round')
-		.select('round')
+		.select('round,season')
 		.not('round', 'is', null)
 		.limit(1)
 		.maybeSingle()
 
 	const currentRound =
 		typeof currentRoundRow?.round === 'number' ? currentRoundRow.round : null
+	const currentSeason =
+		typeof currentRoundRow?.season === 'string' ? currentRoundRow.season : null
 
-	const { data, error } = await supabase
+	let query = supabase
 		.from('games')
 		.select('round')
 		.not('round', 'is', null)
 		.order('round', { ascending: false })
+	if (currentSeason) query = query.eq('season', currentSeason)
+	const { data, error } = await query
 	if (error) throw error
 	const rounds = (data ?? [])
 		.map((row) => row.round)
@@ -169,7 +181,8 @@ export async function getAllRoundsFromGames(): Promise<number[]> {
 
 export async function getUsersWithPredictionsByRound(
 	round: number,
-	excludeUserId?: number
+	excludeUserId?: number,
+	season?: string
 ): Promise<PredictionUserRow[]> {
 	if (!round) return []
 	let query = supabase
@@ -178,6 +191,10 @@ export async function getUsersWithPredictionsByRound(
 		.eq('round', round)
 		.not('user_id', 'is', null)
 		.order('created_at', { ascending: true })
+
+	if (season) {
+		query = query.eq('season', season)
+	}
 
 	if (excludeUserId) {
 		query = query.neq('user_id', excludeUserId)
@@ -215,16 +232,19 @@ export async function getAllPredictions(): Promise<PredictionRow[]> {
 }
 
 export async function getPredictionsByRound(
-	round: number
+	round: number,
+	season?: string
 ): Promise<PredictionRoundRow[]> {
 	if (!round) return []
-	const { data, error } = await supabase
+	let query = supabase
 		.from('predictions')
 		.select('game_id,home_goals,away_goals')
 		.eq('round', round)
 		.not('game_id', 'is', null)
 		.not('home_goals', 'is', null)
 		.not('away_goals', 'is', null)
+	if (season) query = query.eq('season', season)
+	const { data, error } = await query
 	if (error) throw error
 	return (data ?? []).map((row) => ({
 		game_id: Number(row.game_id),
@@ -233,13 +253,18 @@ export async function getPredictionsByRound(
 	}))
 }
 
-export async function hasPredictionsByRound(round: number): Promise<boolean> {
+export async function hasPredictionsByRound(
+	round: number,
+	season?: string
+): Promise<boolean> {
 	if (!round) return false
-	const { data, error } = await supabase
+	let query = supabase
 		.from('predictions')
 		.select('id')
 		.eq('round', round)
 		.limit(1)
+	if (season) query = query.eq('season', season)
+	const { data, error } = await query
 	if (error) throw error
 	return (data?.length ?? 0) > 0
 }
@@ -284,6 +309,7 @@ export type PredictionRow = {
 	created_on: string
 	game_id: number
 	round: number
+	season: string | null
 	game_result: Database['public']['Tables']['predictions']['Row']['game_result']
 	status: Database['public']['Tables']['predictions']['Row']['status']
 }

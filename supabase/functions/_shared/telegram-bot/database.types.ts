@@ -26,6 +26,7 @@ export type Database = {
           home_logo: string | null
           id: string
           round: number | null
+          season: string | null
           score: string | null
           time: string | null
         }
@@ -40,6 +41,7 @@ export type Database = {
           home_logo?: string | null
           id?: string
           round?: number | null
+          season?: string | null
           score?: string | null
           time?: string | null
         }
@@ -54,6 +56,7 @@ export type Database = {
           home_logo?: string | null
           id?: string
           round?: number | null
+          season?: string | null
           score?: string | null
           time?: string | null
         }
@@ -75,6 +78,7 @@ export type Database = {
           home_name: string
           id: string
           round: number
+          season: string | null
           time: string | null
           updated_at: string | null
         }
@@ -93,6 +97,7 @@ export type Database = {
           home_name: string
           id?: string
           round: number
+          season?: string | null
           time?: string | null
           updated_at?: string | null
         }
@@ -111,6 +116,7 @@ export type Database = {
           home_name?: string
           id?: string
           round?: number
+          season?: string | null
           time?: string | null
           updated_at?: string | null
         }
@@ -176,6 +182,7 @@ export type Database = {
           home_logo: string | null
           id: string
           round: number | null
+          season: string | null
           score: string | null
           time: string | null
         }
@@ -190,6 +197,7 @@ export type Database = {
           home_logo?: string | null
           id?: string
           round?: number | null
+          season?: string | null
           score?: string | null
           time?: string | null
         }
@@ -204,6 +212,7 @@ export type Database = {
           home_logo?: string | null
           id?: string
           round?: number | null
+          season?: string | null
           score?: string | null
           time?: string | null
         }
@@ -223,6 +232,7 @@ export type Database = {
           id: string
           last_name: string | null
           round: number | null
+          season: string | null
           status: Database["public"]["Enums"]["status"] | null
           user_id: number | null
           username: string | null
@@ -240,6 +250,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           round?: number | null
+          season?: string | null
           status?: Database["public"]["Enums"]["status"] | null
           user_id?: number | null
           username?: string | null
@@ -257,9 +268,31 @@ export type Database = {
           id?: string
           last_name?: string | null
           round?: number | null
+          season?: string | null
           status?: Database["public"]["Enums"]["status"] | null
           user_id?: number | null
           username?: string | null
+        }
+        Relationships: []
+      }
+      seasons: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          label: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          label: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
         }
         Relationships: []
       }

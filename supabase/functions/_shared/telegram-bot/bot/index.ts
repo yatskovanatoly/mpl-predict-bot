@@ -203,6 +203,7 @@ bot.callbackQuery('predict', async (ctx) => {
 	const usersPredictions = await getPredictionsByUser(
 		ctx.from.id,
 		games[0].round,
+		games[0].season,
 	)
 
 	if (isPastMatchDay && !usersPredictions.length) {
@@ -266,6 +267,7 @@ bot.callbackQuery('predict', async (ctx) => {
 bot.on('callback_query:data', async (ctx) => {
 	const data = ctx.callbackQuery.data
 	const games = await getGamesForDisplay()
+	const currentSeason = games[0]?.season
 
 	if (data.startsWith('game_')) {
 		await ctx.answerCallbackQuery()
@@ -306,6 +308,7 @@ bot.on('callback_query:data', async (ctx) => {
 		const usersPredictions = await getPredictionsByUser(
 			ctx.from!.id,
 			games[0].round - 1,
+			games[0].season,
 		)
 		const grouped = groupPredictionsByStatus(usersPredictions)
 		const predictionsList = formatUserPredictions(grouped, ctx)
@@ -315,7 +318,7 @@ bot.on('callback_query:data', async (ctx) => {
 	}
 
 	if (data === 'my_rounds') {
-		const rounds = await getUserRoundsWithPredictions(ctx.from!.id)
+		const rounds = await getUserRoundsWithPredictions(ctx.from!.id, currentSeason)
 		await ctx.answerCallbackQuery()
 		if (!rounds.length) {
 			return ctx.editMessageText(ctx.t('no_rounds_with_predictions'), {
@@ -335,7 +338,7 @@ bot.on('callback_query:data', async (ctx) => {
 
 	if (data.startsWith('mr_page_')) {
 		const page = Number(data.replace('mr_page_', ''))
-		const rounds = await getUserRoundsWithPredictions(ctx.from!.id)
+		const rounds = await getUserRoundsWithPredictions(ctx.from!.id, currentSeason)
 		await ctx.answerCallbackQuery()
 		if (!rounds.length) {
 			return ctx.editMessageText(ctx.t('no_rounds_with_predictions'), {
@@ -361,7 +364,11 @@ bot.on('callback_query:data', async (ctx) => {
 				reply_markup: buildMenuButton(ctx),
 			})
 		}
-		const usersPredictions = await getPredictionsByUser(ctx.from!.id, round)
+		const usersPredictions = await getPredictionsByUser(
+			ctx.from!.id,
+			round,
+			currentSeason,
+		)
 		await ctx.answerCallbackQuery()
 		if (!usersPredictions.length) {
 			return ctx.editMessageText(ctx.t('no_predictions_for_round'), {
@@ -405,7 +412,7 @@ bot.on('callback_query:data', async (ctx) => {
 		}
 
 		const round = games[0].round
-		const predictions = await getPredictionsByRound(round)
+		const predictions = await getPredictionsByRound(round, currentSeason)
 		if (!predictions.length) {
 			return ctx.editMessageText(ctx.t('no_upcoming_predictions'), {
 				reply_markup: buildMenuButton(ctx),
@@ -470,7 +477,11 @@ bot.on('callback_query:data', async (ctx) => {
 				reply_markup: buildMenuButton(ctx),
 			})
 		}
-		const users = await getUsersWithPredictionsByRound(round, ctx.from?.id)
+		const users = await getUsersWithPredictionsByRound(
+			round,
+			ctx.from?.id,
+			currentSeason,
+		)
 		await ctx.answerCallbackQuery()
 		if (!users.length) {
 			return ctx.editMessageText(ctx.t('no_users_for_round'), {
@@ -498,7 +509,11 @@ bot.on('callback_query:data', async (ctx) => {
 				reply_markup: buildMenuButton(ctx),
 			})
 		}
-		const users = await getUsersWithPredictionsByRound(round, ctx.from?.id)
+		const users = await getUsersWithPredictionsByRound(
+			round,
+			ctx.from?.id,
+			currentSeason,
+		)
 		await ctx.answerCallbackQuery()
 		if (!users.length) {
 			return ctx.editMessageText(ctx.t('no_users_for_round'), {
@@ -526,7 +541,11 @@ bot.on('callback_query:data', async (ctx) => {
 				reply_markup: buildMenuButton(ctx),
 			})
 		}
-		const usersPredictions = await getPredictionsByUser(userId, round)
+		const usersPredictions = await getPredictionsByUser(
+			userId,
+			round,
+			currentSeason,
+		)
 		await ctx.answerCallbackQuery()
 		if (!usersPredictions.length) {
 			return ctx.editMessageText(ctx.t('no_predictions_for_round'), {
@@ -559,6 +578,7 @@ bot.on('callback_query:data', async (ctx) => {
 		const usersPredictions = await getPredictionsByUser(
 			ctx.from!.id,
 			games[0].round,
+			games[0].season,
 		)
 		ctx.editMessageText(ctx.t('choose_edit_match'), {
 			reply_markup: buildEditMenu(ctx, usersPredictions),
@@ -589,7 +609,7 @@ bot.on('message:text', async (ctx) => {
 	if (ctx.session.game) {
 		const score = parseScore(msg)
 		const [homeGoals, awayGoals] = score.split('-')
-		const { home, away, round, game_id } = ctx.session.game
+		const { home, away, round, game_id, season } = ctx.session.game
 		try {
 			return await saveUserPrediction(
 				game_id,
@@ -598,6 +618,7 @@ bot.on('message:text', async (ctx) => {
 				away,
 				score,
 				round,
+				season,
 			).then(async () => {
 				await ctx.reply(
 					ctx.t('prediction_made', {
@@ -609,9 +630,11 @@ bot.on('message:text', async (ctx) => {
 					}),
 					{ parse_mode: 'MarkdownV2' },
 				)
-				const predicted = await getPredictionsByUser(ctx.from.id, round).then(
-					(data) => data.map((p) => p.game_id),
-				)
+				const predicted = await getPredictionsByUser(
+					ctx.from.id,
+					round,
+					season,
+				).then((data) => data.map((p) => p.game_id))
 				const games = await getGamesForDisplay()
 				const title =
 					predicted.length < games.length

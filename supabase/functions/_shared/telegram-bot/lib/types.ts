@@ -18,6 +18,7 @@ export type Game = {
 	time?: string | undefined
 	round: number
 	date: Date
+	season: string
 }
 
 export type Rounds = {

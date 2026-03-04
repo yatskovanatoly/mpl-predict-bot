@@ -2,6 +2,32 @@ import { DOMParser } from "jsr:@b-fuze/deno-dom@0.1.56";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const MPL_ID = '202'
+const RU_MONTHS: Record<string, string> = {
+	январь: '01',
+	февраль: '02',
+	март: '03',
+	апрель: '04',
+	май: '05',
+	июнь: '06',
+	июль: '07',
+	август: '08',
+	сентябрь: '09',
+	октябрь: '10',
+	ноябрь: '11',
+	декабрь: '12',
+}
+
+const parseSeasonCode = (text: string) => {
+	const normalized = text.toLowerCase().replace(/\s+/g, ' ').trim()
+	const match = normalized.match(
+		/(январь|февраль|март|апрель|май|июнь|июль|август|сентябрь|октябрь|ноябрь|декабрь)\s+(\d{4})\s*[—-]\s*(январь|февраль|март|апрель|май|июнь|июль|август|сентябрь|октябрь|ноябрь|декабрь)\s+(\d{4})/,
+	)
+	if (!match) return null
+	const [, startMonth, startYear, endMonth, endYear] = match
+	const start = `${RU_MONTHS[startMonth]}-${startYear}`
+	const end = `${RU_MONTHS[endMonth]}-${endYear}`
+	return `${start}, ${end}`
+}
 
 const parseGoal = (value: string | undefined) => {
 	if (!value) return undefined
@@ -13,7 +39,7 @@ export const getRoundGames = async (html: string) => {
 	const doc = new DOMParser().parseFromString(html, 'text/html')
 	if (!doc) return []
 
-	type Game = {
+		type Game = {
 		game_id: number
 		time: string
 		home_id: string
@@ -25,14 +51,20 @@ export const getRoundGames = async (html: string) => {
 		home_goals: number | undefined
 		away_goals: number | undefined
 		events_url: string
-		round: number
-		forfeit?: boolean
-	}
+			round: number
+			season: string | null
+			forfeit?: boolean
+		}
 
 	const games: Game[] = []
 
 	const parentDiv = doc.querySelector('#full_forwards')
 	if (!parentDiv) return []
+	const seasonText =
+		doc.querySelector('.subheader a.link')?.textContent?.trim() ??
+		doc.querySelector('.subheader')?.textContent?.trim() ??
+		''
+	const seasonCode = parseSeasonCode(seasonText)
 
 	for (const table of parentDiv.querySelectorAll('table.championship')) {
 		const stageEl = table.previousElementSibling
@@ -72,6 +104,7 @@ export const getRoundGames = async (html: string) => {
 				away_goals: parseGoal(awayGoalsRaw),
 				events_url: scoreEl?.getAttribute('href') ?? '',
 				round,
+				season: seasonCode,
 			})
 		}
 	}
@@ -127,9 +160,39 @@ Deno.serve(async () => {
 		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 	)
 
+	let fallbackSeason =
+		games.find((game) => game.season && game.season !== '')?.season ?? null
+
+	if (!fallbackSeason) {
+		const { data: currentSeason } = await supabase
+			.from('current_round')
+			.select('season')
+			.not('season', 'is', null)
+			.limit(1)
+			.maybeSingle()
+		fallbackSeason = currentSeason?.season ?? null
+	}
+
+	if (!fallbackSeason) {
+		const { data: latestSeason } = await supabase
+			.from('seasons')
+			.select('code')
+			.order('created_at', { ascending: false })
+			.limit(1)
+			.maybeSingle()
+		fallbackSeason = latestSeason?.code ?? null
+	}
+
+	const gamesWithSeason = fallbackSeason
+		? games.map((game) => ({
+				...game,
+				season: game.season && game.season !== '' ? game.season : fallbackSeason,
+		  }))
+		: games
+
 	const { data, error } = await supabase
 		.from('games')
-		.upsert(games, {
+		.upsert(gamesWithSeason, {
 			onConflict: 'game_id',
 		})
 		.select()
