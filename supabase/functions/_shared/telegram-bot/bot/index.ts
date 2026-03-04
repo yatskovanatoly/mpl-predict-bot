@@ -8,7 +8,6 @@ import {
   Bot,
   Context,
   GrammyError,
-  InlineKeyboard,
   session,
   SessionFlavor,
 } from 'npm:grammy@^1.38.3';
@@ -36,34 +35,67 @@ import { gameResultIteratee } from './game-result-iteratee.ts';
 import { groupPredictionsByStatus } from './group-predictions-by-status.ts';
 import { saveUserPrediction } from './save-prediction.ts';
 
-// const token = Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
-const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
+type AppEnv = 'development' | 'production'
+type BotMode = 'polling' | 'webhook'
+
+const appEnv = (
+	Deno.env.get('APP_ENV') ??
+	Deno.env.get('ENV') ??
+	'production'
+).toLowerCase() as AppEnv
+const isDev = appEnv === 'development'
+const botMode = (Deno.env.get('BOT_MODE') ??
+	(isDev ? 'polling' : 'webhook')) as BotMode
+const token = isDev
+	? Deno.env.get('TELEGRAM_BOT_TOKEN_DEV') ?? Deno.env.get('TELEGRAM_BOT_TOKEN')
+	: Deno.env.get('TELEGRAM_BOT_TOKEN') ?? Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
 const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
 
-if (!token) throw new Error('TELEGRAM_BOT_TOKEN is missing')
+if (!token) {
+	throw new Error(
+		'Telegram token is missing. Set TELEGRAM_BOT_TOKEN (prod) or TELEGRAM_BOT_TOKEN_DEV (dev).',
+	)
+}
 if (!supabaseUrl) throw new Error('db url is missing')
 if (!supabaseKey) throw new Error('db key is missing')
 
 export const bot = new Bot<MyContext>(token)
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
-const currentGames = await getCurrentRound()
-const nextGames = await getNextRound()
+const getGamesForDisplay = async (): Promise<Game[]> => {
+	const currentGames = await getCurrentRound()
+	const nextGames = await getNextRound()
 
-const games =
-	currentGames.some((game) => !game.score) &&
-	addDays(new Date(currentGames.at(-1)!.date), 1) >= new Date()
-		? currentGames
-		: nextGames
+	if (!currentGames.length) return nextGames
+	if (!nextGames.length) return currentGames
+
+	const currentLastDateRaw = currentGames.at(-1)?.date
+	const currentLastDate = currentLastDateRaw
+		? new Date(currentLastDateRaw)
+		: undefined
+	const currentIsActive =
+		currentGames.some((game) => !game.score) &&
+		!!currentLastDate &&
+		!Number.isNaN(currentLastDate.getTime()) &&
+		addDays(currentLastDate, 1) >= new Date()
+
+	return currentIsActive ? currentGames : nextGames
+}
+
+const hasUpcomingRound = (games: Game[]) => {
+	if (!games.length) return false
+	const matchDate = new Date(games[0].date)
+	if (Number.isNaN(matchDate.getTime())) return false
+	const daysDiff = differenceInDays(matchDate, addHours(new Date(), 3))
+	return daysDiff >= -1 && daysDiff <= 30
+}
 
 const i18n = new I18n<Context>({
 	defaultLocale: 'ru',
 })
 
 await i18n.loadLocale('ru', { source: ru })
-
-const roundMenu = new InlineKeyboard()
 
 bot
 	.use(i18n)
@@ -87,6 +119,7 @@ bot
 	})
 
 bot.command('start', async (ctx) => {
+	const games = await getGamesForDisplay()
 	ctx.session = {
 		game: undefined,
 		leaderboard: { page: 1, total_pages: 1 },
@@ -116,16 +149,17 @@ bot.command('changelog', async (ctx) => {
 })
 
 bot.callbackQuery('predict', async (ctx) => {
-	const matchDate = new Date(games[0].date)
-	const now = addHours(new Date(), 3)
-	const isPastMatchDay = matchDate <= now
-
-	if (!games || differenceInDays(matchDate, now) > 30) {
+	const games = await getGamesForDisplay()
+	if (!games.length || !hasUpcomingRound(games)) {
 		await ctx.answerCallbackQuery()
 		return ctx.editMessageText(ctx.t('no_upcoming_games'), {
 			reply_markup: buildMenuButton(ctx),
 		})
 	}
+
+	const matchDate = new Date(games[0].date)
+	const now = addHours(new Date(), 3)
+	const isPastMatchDay = matchDate <= now
 
 	const usersPredictions = await getPredictionsByUser(
 		ctx.from.id,
@@ -144,26 +178,16 @@ bot.callbackQuery('predict', async (ctx) => {
 		)
 	}
 
-	const gamesWithPrediction: Game[] = []
 	const gamesWithoutPrediction: Game[] = []
 
 	games.forEach((game: Game) => {
 		const hasPrediction = usersPredictions.some(
 			(p) => p.game_id === game.game_id,
 		)
-		if (hasPrediction) {
-			gamesWithPrediction.push(game)
-		} else {
+		if (!hasPrediction) {
 			gamesWithoutPrediction.push(game)
 		}
 	})
-
-	gamesWithoutPrediction.forEach(({ game_id, home, away }) => {
-		roundMenu.text(`${home} — ${away}`, `game_${game_id}`)
-		roundMenu.row()
-	})
-
-	roundMenu.text(ctx.t('menu'), 'menu')
 
 	const hasPredictions = usersPredictions.length > 0
 	const roundNumber = games[0].round
@@ -202,9 +226,15 @@ bot.callbackQuery('predict', async (ctx) => {
 
 bot.on('callback_query:data', async (ctx) => {
 	const data = ctx.callbackQuery.data
+	const games = await getGamesForDisplay()
 
 	if (data.startsWith('game_')) {
 		await ctx.answerCallbackQuery()
+		if (!games.length || !hasUpcomingRound(games)) {
+			return ctx.editMessageText(ctx.t('no_upcoming_games'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
 
 		const game = games.find((game: Game) => game.game_id === parseGameId(data))
 
@@ -224,6 +254,13 @@ bot.on('callback_query:data', async (ctx) => {
 	}
 
 	if (data === 'prev') {
+		if (!games.length || games[0].round <= 1) {
+			await ctx.answerCallbackQuery()
+			return ctx.editMessageText(ctx.t('no_upcoming_games'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
+
 		const usersPredictions = await getPredictionsByUser(
 			ctx.from!.id,
 			games[0].round - 1,
@@ -236,6 +273,12 @@ bot.on('callback_query:data', async (ctx) => {
 	}
 
 	if (data === 'edit') {
+		if (!games.length || !hasUpcomingRound(games)) {
+			await ctx.answerCallbackQuery()
+			return ctx.editMessageText(ctx.t('no_upcoming_games'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
 		if (await ensurePredictionsOpen(ctx, games)) return
 		const usersPredictions = await getPredictionsByUser(
 			ctx.from!.id,
@@ -248,6 +291,12 @@ bot.on('callback_query:data', async (ctx) => {
 	}
 
 	if (data.startsWith('edit_')) {
+		if (!games.length || !hasUpcomingRound(games)) {
+			await ctx.answerCallbackQuery()
+			return ctx.editMessageText(ctx.t('no_upcoming_games'), {
+				reply_markup: buildMenuButton(ctx),
+			})
+		}
 		if (await ensurePredictionsOpen(ctx, games)) return
 		const game = games.find((game: Game) => game.game_id === parseGameId(data))
 
@@ -287,6 +336,7 @@ bot.on('message:text', async (ctx) => {
 				const predicted = await getPredictionsByUser(ctx.from.id, round).then(
 					(data) => data.map((p) => p.game_id),
 				)
+				const games = await getGamesForDisplay()
 				const title =
 					predicted.length < games.length
 						? ctx.t('match_select')
@@ -314,7 +364,19 @@ bot.on('message:text', async (ctx) => {
 	await ctx.reply(ctx.t('fallback'))
 })
 
-// bot.start()
+if (import.meta.main) {
+	if (botMode === 'polling') {
+		console.log(`[bot] Starting in polling mode (${appEnv})`)
+		await bot.start({
+			drop_pending_updates: true,
+			onStart: () => console.log('[bot] Polling started'),
+		})
+	} else {
+		console.log(
+			`[bot] Mode "${botMode}" (${appEnv}). Webhook serving is handled by supabase/functions/telegram-bot/index.ts`,
+		)
+	}
+}
 
 export type SessionData = {
 	game: Game | undefined

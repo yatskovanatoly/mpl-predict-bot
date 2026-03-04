@@ -1,6 +1,14 @@
 import { DOMParser } from "jsr:@b-fuze/deno-dom@0.1.56";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+const MPL_ID = '202'
+
+const parseGoal = (value: string | undefined) => {
+	if (!value) return undefined
+	const goal = Number(value)
+	return Number.isFinite(goal) ? goal : undefined
+}
+
 export const getRoundGames = async (html: string) => {
 	const doc = new DOMParser().parseFromString(html, 'text/html')
 	if (!doc) return []
@@ -46,6 +54,7 @@ export const getRoundGames = async (html: string) => {
 			const awayImg = row.querySelector('td.away img')
 			const scoreEl = row.querySelector('td.score a')
 			const scoreText = scoreEl?.textContent.trim() ?? ''
+			const [homeGoalsRaw, awayGoalsRaw] = scoreText.split(':')
 			const game_id = Number(
 				scoreEl?.getAttribute('href')?.split('/').at(-2) ?? 0
 			)
@@ -59,8 +68,8 @@ export const getRoundGames = async (html: string) => {
 				away_id: row.querySelector('td.away')?.getAttribute('name') ?? '',
 				away_name: awayEl?.textContent.trim() ?? '',
 				away_logo: awayImg?.getAttribute('src') ?? '',
-				home_goals: Number(scoreText.split(':')[0]) ?? undefined,
-				away_goals: Number(scoreText.split(':')[1]) ?? undefined,
+				home_goals: parseGoal(homeGoalsRaw),
+				away_goals: parseGoal(awayGoalsRaw),
 				events_url: scoreEl?.getAttribute('href') ?? '',
 				round,
 			})
@@ -84,7 +93,7 @@ export const getRoundGames = async (html: string) => {
 }
 
 export const isTechnicalResult = async (gameId: number): Promise<boolean> => {
-	const url = `https://mychamp.ru/championships/202/games/${gameId}/events`
+	const url = `https://mychamp.ru/championships/${MPL_ID}/games/${gameId}/events`
 
 	const res = await fetch(url)
 	if (!res.ok) {
@@ -107,7 +116,7 @@ export const isTechnicalResult = async (gameId: number): Promise<boolean> => {
 
 Deno.serve(async () => {
 	const url =
-		'https://mychamp.ru/championships/202/games?configuration[type]=games'
+		`https://mychamp.ru/championships/${MPL_ID}/games?configuration[type]=games`
 
 	const res = await fetch(url)
 	const html = await res.text()
