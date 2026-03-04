@@ -24,6 +24,7 @@ import ensurePredictionsOpen from '../helpers/ensure-predictions-open.ts';
 import { handleLeaderboard } from '../helpers/handle-leaderboard.ts';
 import { parseGameId } from '../helpers/parse-game-id.ts';
 import { parseScore } from '../helpers/parse-score.ts';
+import { sanitizeTeamName } from '../helpers/sanitize-team-name.ts';
 import {
   getAllRoundsFromGames,
   getCurrentRound,
@@ -435,7 +436,7 @@ bot.on('callback_query:data', async (ctx) => {
 				}
 			})
 
-			return `${game.home} – ${game.away}\n${formatOutcomePercentages(
+			return `${sanitizeTeamName(game.home)} – ${sanitizeTeamName(game.away)}\n${formatOutcomePercentages(
 				homeWinCount,
 				drawCount,
 				awayWinCount,
