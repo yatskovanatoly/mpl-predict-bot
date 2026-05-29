@@ -147,81 +147,6 @@ export async function getAllRoundsWithPredictions(): Promise<number[]> {
 	return [...new Set(rounds)]
 }
 
-export async function getAllRoundsFromGames(): Promise<number[]> {
-	const { data: currentRoundRow } = await supabase
-		.from('current_round')
-		.select('round,season')
-		.not('round', 'is', null)
-		.limit(1)
-		.maybeSingle()
-
-	const currentRound =
-		typeof currentRoundRow?.round === 'number' ? currentRoundRow.round : null
-	const currentSeason =
-		typeof currentRoundRow?.season === 'string' ? currentRoundRow.season : null
-
-	let query = supabase
-		.from('games')
-		.select('round')
-		.not('round', 'is', null)
-		.order('round', { ascending: false })
-	if (currentSeason) query = query.eq('season', currentSeason)
-	const { data, error } = await query
-	if (error) throw error
-	const rounds = (data ?? [])
-		.map((row) => row.round)
-		.filter((round): round is number => typeof round === 'number')
-	const uniqueRounds = [...new Set(rounds)]
-
-	if (currentRound === null) return uniqueRounds
-
-	// Keep full past history, but expose at most one future round.
-	return uniqueRounds.filter((round) => round <= currentRound + 1)
-}
-
-export async function getUsersWithPredictionsByRound(
-	round: number,
-	excludeUserId?: number,
-	season?: string
-): Promise<PredictionUserRow[]> {
-	if (!round) return []
-	let query = supabase
-		.from('predictions')
-		.select('user_id,username,first_name,last_name')
-		.eq('round', round)
-		.not('user_id', 'is', null)
-		.order('created_at', { ascending: true })
-
-	if (season) {
-		query = query.eq('season', season)
-	}
-
-	if (excludeUserId) {
-		query = query.neq('user_id', excludeUserId)
-	}
-
-	const { data, error } = await query
-	if (error) throw error
-
-	const users = (data ?? [])
-		.map((row) => ({
-			user_id: Number(row.user_id),
-			username: row.username,
-			first_name: row.first_name,
-			last_name: row.last_name,
-		}))
-		.filter((row) => Number.isFinite(row.user_id))
-
-	const seen = new Set<number>()
-	const unique: PredictionUserRow[] = []
-	for (const user of users) {
-		if (seen.has(user.user_id)) continue
-		seen.add(user.user_id)
-		unique.push(user)
-	}
-	return unique
-}
-
 export async function getAllPredictions(): Promise<PredictionRow[]> {
 	const { data, error } = await supabase
 		.from('predictions')
@@ -312,13 +237,6 @@ export type PredictionRow = {
 	season: string | null
 	game_result: Database['public']['Tables']['predictions']['Row']['game_result']
 	status: Database['public']['Tables']['predictions']['Row']['status']
-}
-
-export type PredictionUserRow = {
-	user_id: number
-	username: string | null
-	first_name: string | null
-	last_name: string | null
 }
 
 export type PredictionRoundRow = {

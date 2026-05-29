@@ -14,7 +14,6 @@ export const buildMainMenu = async (ctx: MyContext, games: Game[]) => {
 	if (!games.length) {
 		kb.text(ctx.t('predict'), 'predict').row()
 		kb.text(ctx.t('my_rounds'), 'my_rounds').row()
-		kb.text(ctx.t('others_rounds'), 'others_rounds').row()
 		kb.text(ctx.t('leaderboard'), 'leaderboard')
 		return kb
 	}
@@ -51,7 +50,6 @@ export const buildMainMenu = async (ctx: MyContext, games: Game[]) => {
 	}
 
 	kb.text(ctx.t('my_rounds'), 'my_rounds').row()
-	kb.text(ctx.t('others_rounds'), 'others_rounds').row()
 	if (hasUpcomingPredictions) {
 		kb.text(ctx.t('upcoming_percentages'), 'upcoming_percentages').row()
 	}
@@ -112,44 +110,6 @@ export const buildRoundsMenu = (
 		kb.text(ctx.t('back'), `${callbackPrefix}page_${prevPage}`)
 		kb.text(`${safePage}/${totalPages}`, `${callbackPrefix}noop`)
 		kb.text(ctx.t('forward'), `${callbackPrefix}page_${nextPage}`).row()
-	}
-	kb.text(ctx.t('menu'), 'menu')
-	return kb
-}
-
-export const buildUsersMenu = (
-	ctx: MyContext,
-	users: {
-		user_id: number
-		username: string | null
-		first_name: string | null
-		last_name: string | null
-	}[],
-	round: number,
-	page = 1,
-	pageSize = 10
-) => {
-	const kb = new InlineKeyboard()
-	const totalPages = Math.max(1, Math.ceil(users.length / pageSize))
-	const safePage = Math.min(Math.max(1, page), totalPages)
-	const start = (safePage - 1) * pageSize
-	const end = start + pageSize
-	const pageUsers = users.slice(start, end)
-
-	pageUsers.forEach((user) => {
-		const label = user.username
-			? `@${user.username}`
-			: `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() ||
-				`${user.user_id}`
-		kb.text(label, `ou_${round}_${user.user_id}`).row()
-	})
-
-	if (totalPages > 1) {
-		const prevPage = Math.max(1, safePage - 1)
-		const nextPage = Math.min(totalPages, safePage + 1)
-		kb.text(ctx.t('back'), `ou_page_${round}_${prevPage}`)
-		kb.text(`${safePage}/${totalPages}`, `ou_page_${round}_${safePage}`)
-		kb.text(ctx.t('forward'), `ou_page_${round}_${nextPage}`).row()
 	}
 	kb.text(ctx.t('menu'), 'menu')
 	return kb
