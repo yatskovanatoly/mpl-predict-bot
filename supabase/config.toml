@@ -335,3 +335,6 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.telegram_bot]
 verify_jwt = false
+
+[functions.friday-reminder]
+verify_jwt = false

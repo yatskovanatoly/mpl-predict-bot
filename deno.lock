@@ -3,6 +3,7 @@
   "specifiers": {
     "jsr:@std/internal@^1.0.10": "1.0.10",
     "jsr:@std/path@1.1.2": "1.1.2",
+    "jsr:@supabase/supabase-js@2": "2.58.0",
     "jsr:@supabase/supabase-js@^2.56.0": "2.58.0",
     "npm:@grammyjs/i18n@1.1.2": "1.1.2_grammy@1.39.3",
     "npm:@grammyjs/i18n@^1.1.2": "1.1.2_grammy@1.39.3",
