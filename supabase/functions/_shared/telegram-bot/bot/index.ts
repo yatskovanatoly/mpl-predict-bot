@@ -265,7 +265,8 @@ bot.on('callback_query:data', async (ctx) => {
 		if (game) await buildMatchMessage(ctx, game)
 	}
 
-	if (data.startsWith('leaderboard')) await handleLeaderboard(ctx, data)
+	if (data.startsWith('leaderboard'))
+		return await handleLeaderboard(ctx, data, currentSeason)
 	if (data.endsWith('noop')) {
 		return ctx.answerCallbackQuery()
 	}
@@ -526,6 +527,7 @@ export type SessionData = {
 	leaderboard: {
 		page: number
 		total_pages: number
+		season?: string | null
 	}
 }
 export type MyContext = Context & SessionFlavor<SessionData> & I18nFlavor

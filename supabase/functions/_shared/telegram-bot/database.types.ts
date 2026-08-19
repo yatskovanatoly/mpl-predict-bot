@@ -296,6 +296,42 @@ export type Database = {
         }
         Relationships: []
       }
+      season_standings: {
+        Row: {
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          place: number
+          points: number
+          season: string
+          user_id: number
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          place: number
+          points?: number
+          season: string
+          user_id: number
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          place?: number
+          points?: number
+          season?: string
+          user_id?: number
+          username?: string | null
+        }
+        Relationships: []
+      }
       tmp_import: {
         Row: {
           created_at: string
@@ -331,12 +367,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_season: {
+        Args: { p_season: string }
+        Returns: number
+      }
+      get_archived_seasons: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_leaderboard_by_points: {
         Args:
           | Record<PropertyKey, never>
           | { page?: number }
           | { page?: number; page_size?: number }
         Returns: Json
+      }
+      get_leaderboard_by_season: {
+        Args: { p_season?: string | null; page?: number; page_size?: number }
+        Returns: Json
+      }
+      prediction_points: {
+        Args: { p_status: Database["public"]["Enums"]["status"] | null }
+        Returns: number
+      }
+      season_standings_computed: {
+        Args: { p_season: string }
+        Returns: {
+          first_name: string | null
+          last_name: string | null
+          points: number
+          user_id: number
+          username: string | null
+        }[]
       }
     }
     Enums: {

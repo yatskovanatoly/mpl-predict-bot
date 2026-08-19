@@ -12,13 +12,24 @@ export async function getCurrentRound(): Promise<Game[]> {
 	return data
 }
 
-export async function getLeaderboardGrouped(page = 1): Promise<any> {
-	const { data, error } = await supabase.rpc('get_leaderboard_by_points', {
+export async function getLeaderboardGrouped(
+	page = 1,
+	season?: string | null
+): Promise<SeasonLeaderboard> {
+	const { data, error } = await supabase.rpc('get_leaderboard_by_season', {
+		p_season: season ?? null,
 		page,
 	})
 
 	if (error) throw error
-	return data
+	return data as unknown as SeasonLeaderboard
+}
+
+export async function getArchivedSeasons(): Promise<string[]> {
+	const { data, error } = await supabase.rpc('get_archived_seasons')
+
+	if (error) throw error
+	return (data ?? []) as unknown as string[]
 }
 
 export async function getNextRound(): Promise<Game[]> {
@@ -243,4 +254,21 @@ export type PredictionRoundRow = {
 	game_id: number
 	home_goals: number
 	away_goals: number
+}
+
+export type SeasonLeaderboardRow = {
+	user_id: number
+	username: string | null
+	first_name: string
+	last_name: string | null
+	points: number
+}
+
+export type SeasonLeaderboard = {
+	data: Record<number, SeasonLeaderboardRow[]>
+	season: string | null
+	is_archived: boolean
+	page: number
+	total_pages: number
+	total: number
 }

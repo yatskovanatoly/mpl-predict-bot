@@ -17,6 +17,12 @@ percentages_legend = П1 — победа хозяев, X — ничья, П2 �
 match_select = выбери матч:
 match = какой счёт будет в матче
 leaderboard_view = 📊 таблица лидеров:
+leaderboard_season_view = 📊 таблица лидеров · сезон {$season}
+leaderboard_archive_view = 🏆 итоги сезона {$season}
+leaderboard_archive = 🏆 архив сезонов
+leaderboard_current = 📊 текущий сезон
+leaderboard_archive_choose = 🏆 выбери сезон:
+leaderboard_archive_empty = в архиве пока нет завершённых сезонов
 points = {
   $pts ->
     [one] {$pts} очко 

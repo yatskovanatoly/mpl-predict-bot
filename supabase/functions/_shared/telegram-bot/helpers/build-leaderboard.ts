@@ -1,10 +1,27 @@
 import { MyContext } from '../bot/index.ts'
+import { SeasonLeaderboard } from '../lib/supabase-client.ts'
+import { formatSeason } from './format-season.ts'
+
+export const buildLeaderboardTitle = (
+	ctx: MyContext,
+	season?: string | null,
+	isArchive = false
+) => {
+	const label = formatSeason(season)
+	if (!label) return ctx.t('leaderboard_view')
+
+	return ctx.t(isArchive ? 'leaderboard_archive_view' : 'leaderboard_season_view', {
+		season: label,
+	})
+}
 
 export const buildLeaderboard = (
-	leaderboard: LeaderboardResult,
-	ctx: MyContext
+	leaderboard: SeasonLeaderboard['data'],
+	ctx: MyContext,
+	season?: string | null,
+	isArchive = false
 ): string => {
-	let table = `${ctx.t('leaderboard_view')}\n\n`
+	let table = `${buildLeaderboardTitle(ctx, season, isArchive)}\n\n`
 
 	Object.keys(leaderboard)
 		.map(Number)
@@ -28,13 +45,3 @@ export const buildLeaderboard = (
 
 	return table
 }
-
-type LeaderboardRow = {
-	user_id: number
-	username: string | null
-	first_name: string
-	last_name: string | null
-	points: number
-}
-
-type LeaderboardResult = Record<number, LeaderboardRow[]>

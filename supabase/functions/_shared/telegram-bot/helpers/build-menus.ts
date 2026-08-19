@@ -8,6 +8,7 @@ import {
 } from '../lib/supabase-client.ts'
 import { Game } from '../lib/types.ts'
 import { displayTeamName } from './display-team-name.ts'
+import { formatSeason } from './format-season.ts'
 
 export const buildMainMenu = async (ctx: MyContext, games: Game[]) => {
 	const kb = new InlineKeyboard()
@@ -133,16 +134,41 @@ export const buildEditMenu = (ctx: MyContext, games: PredictionRow[]) => {
 export const buildLeaderboardMenu = (
 	ctx: MyContext,
 	// deno-lint-ignore no-explicit-any
-	leaderboardGrouped: Record<string, any>
+	leaderboardGrouped: Record<string, any> | null,
+	isArchive = false
 ) => {
 	const kb = new InlineKeyboard()
 
-	kb.text(ctx.t('back'), 'leaderboard_previous')
+	if (leaderboardGrouped) {
+		kb.text(ctx.t('back'), 'leaderboard_previous')
+		kb.text(
+			`${leaderboardGrouped.page} / ${leaderboardGrouped.total_pages}`,
+			'leaderboard_first_page'
+		)
+		kb.text(ctx.t('forward'), 'leaderboard_next').row()
+	}
+
 	kb.text(
-		`${leaderboardGrouped.page} / ${leaderboardGrouped.total_pages}`,
-		'leaderboard_first_page'
-	)
-	kb.text(ctx.t('forward'), 'leaderboard_next').row()
+		ctx.t(isArchive ? 'leaderboard_current' : 'leaderboard_archive'),
+		isArchive ? 'leaderboard_current' : 'leaderboard_archive'
+	).row()
+	kb.text(ctx.t('menu'), 'menu')
+
+	return kb
+}
+
+export const buildSeasonsMenu = (
+	ctx: MyContext,
+	seasons: string[],
+	callbackPrefix: string
+) => {
+	const kb = new InlineKeyboard()
+
+	seasons.forEach((season) => {
+		kb.text(`🏆 сезон ${formatSeason(season)}`, `${callbackPrefix}${season}`).row()
+	})
+
+	kb.text(ctx.t('leaderboard_current'), 'leaderboard_current').row()
 	kb.text(ctx.t('menu'), 'menu')
 
 	return kb
