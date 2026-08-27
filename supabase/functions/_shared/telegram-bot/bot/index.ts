@@ -11,7 +11,6 @@ import {
   session,
   SessionFlavor,
 } from 'npm:grammy@^1.38.3';
-import { buildMatchMessage } from '../helpers/build-match-message.ts';
 import {
   buildEditMenu,
   buildMainMenu,
@@ -19,11 +18,15 @@ import {
   buildRoundMenu,
   buildRoundsMenu,
 } from '../helpers/build-menus.ts';
+import {
+  buildScoreMenu,
+  buildScoreText,
+  clampGoals,
+} from '../helpers/build-score-menu.ts';
 import ensurePredictionsOpen from '../helpers/ensure-predictions-open.ts';
 import { displayTeamName } from '../helpers/display-team-name.ts';
 import { handleLeaderboard } from '../helpers/handle-leaderboard.ts';
 import { parseGameId } from '../helpers/parse-game-id.ts';
-import { parseScore } from '../helpers/parse-score.ts';
 import {
   getCurrentRound,
   getNextRound,
@@ -122,7 +125,6 @@ bot
 	.use(
 		session({
 			initial: (): SessionData => ({
-				game: undefined,
 				leaderboard: { page: 1, total_pages: 1 },
 			}),
 			storage: supabaseAdapter<SessionData>({
@@ -141,7 +143,6 @@ bot
 bot.command('start', async (ctx) => {
 	const games = await getGamesForDisplay()
 	ctx.session = {
-		game: undefined,
 		leaderboard: { page: 1, total_pages: 1 },
 	}
 	ctx.reply(ctx.t('start'), { reply_markup: await buildMainMenu(ctx, games) })
@@ -168,10 +169,9 @@ bot.command('changelog', async (ctx) => {
 	}
 })
 
-bot.callbackQuery('predict', async (ctx) => {
+const showPredictScreen = async (ctx: MyContext) => {
 	const games = await getGamesForDisplay()
 	if (!games.length || !hasUpcomingRound(games)) {
-		await ctx.answerCallbackQuery()
 		return ctx.editMessageText(ctx.t('no_upcoming_games'), {
 			reply_markup: buildMenuButton(ctx),
 		})
@@ -182,13 +182,12 @@ bot.callbackQuery('predict', async (ctx) => {
 	const isPastMatchDay = matchDate <= now
 
 	const usersPredictions = await getPredictionsByUser(
-		ctx.from.id,
+		ctx.from!.id,
 		games[0].round,
 		games[0].season,
 	)
 
 	if (isPastMatchDay && !usersPredictions.length) {
-		await ctx.answerCallbackQuery()
 		return ctx.editMessageText(
 			ctx.t('no_predictions_made') +
 				'\n\n' +
@@ -235,7 +234,6 @@ bot.callbackQuery('predict', async (ctx) => {
 
 	try {
 		await ctx.editMessageText(text, { reply_markup: replyMarkup })
-		await ctx.answerCallbackQuery()
 	} catch (err) {
 		console.log(err)
 		if (err instanceof GrammyError) {
@@ -243,6 +241,67 @@ bot.callbackQuery('predict', async (ctx) => {
 		} else ctx.reply(JSON.stringify(err))
 		ctx.reply(ctx.t('fallback'))
 	}
+}
+
+const showScorePicker = async (
+	ctx: MyContext,
+	game: Game,
+	home: number,
+	away: number,
+) => {
+	try {
+		await ctx.editMessageText(buildScoreText(ctx, game, home, away), {
+			reply_markup: buildScoreMenu(ctx, game, home, away),
+		})
+	} catch (err) {
+		// tapping an already selected value leaves the message untouched
+		if (
+			err instanceof GrammyError &&
+			err.description.includes('message is not modified')
+		) {
+			return
+		}
+		throw err
+	}
+}
+
+const openScorePicker = async (
+	ctx: MyContext,
+	games: Game[],
+	gameId: number,
+) => {
+	if (!games.length || !hasUpcomingRound(games)) {
+		await ctx.answerCallbackQuery()
+		return ctx.editMessageText(ctx.t('no_upcoming_games'), {
+			reply_markup: buildMenuButton(ctx),
+		})
+	}
+	if (await ensurePredictionsOpen(ctx, games)) return
+
+	const game = games.find((game: Game) => game.game_id === gameId)
+	if (!game) {
+		await ctx.answerCallbackQuery()
+		return ctx.editMessageText(ctx.t('fallback'), {
+			reply_markup: buildMenuButton(ctx),
+		})
+	}
+
+	const prediction = (
+		await getPredictionsByUser(ctx.from!.id, game.round, game.season)
+	).find((p) => p.game_id === game.game_id)
+
+	await ctx.answerCallbackQuery()
+	return showScorePicker(
+		ctx,
+		game,
+		clampGoals(prediction?.home_goals ?? 0),
+		clampGoals(prediction?.away_goals ?? 0),
+	)
+}
+
+bot.callbackQuery('predict', async (ctx) => {
+	await ctx.answerCallbackQuery()
+	await showPredictScreen(ctx)
 })
 
 bot.on('callback_query:data', async (ctx) => {
@@ -251,18 +310,54 @@ bot.on('callback_query:data', async (ctx) => {
 	const currentSeason = games[0]?.season
 
 	if (data.startsWith('game_')) {
-		await ctx.answerCallbackQuery()
-		if (!games.length || !hasUpcomingRound(games)) {
+		return await openScorePicker(ctx, games, parseGameId(data))
+	}
+
+	if (data.startsWith('sc_') || data.startsWith('scs_')) {
+		const isSubmit = data.startsWith('scs_')
+		const [, gameIdRaw, homeRaw, awayRaw] = data.split('_')
+		const gameId = Number(gameIdRaw)
+		const homeGoals = clampGoals(Number(homeRaw))
+		const awayGoals = clampGoals(Number(awayRaw))
+		const game = games.find((game: Game) => game.game_id === gameId)
+
+		if (!game || !hasUpcomingRound(games)) {
+			await ctx.answerCallbackQuery()
 			return ctx.editMessageText(ctx.t('no_upcoming_games'), {
 				reply_markup: buildMenuButton(ctx),
 			})
 		}
+		if (await ensurePredictionsOpen(ctx, games)) return
 
-		const game = games.find((game: Game) => game.game_id === parseGameId(data))
+		if (!isSubmit) {
+			await ctx.answerCallbackQuery()
+			return await showScorePicker(ctx, game, homeGoals, awayGoals)
+		}
 
-		ctx.session.game = game
+		try {
+			await saveUserPrediction(
+				gameId,
+				ctx,
+				game.home,
+				game.away,
+				`${homeGoals}-${awayGoals}`,
+				game.round,
+				game.season,
+			)
+		} catch (err) {
+			console.error(err)
+			const errMessage = err as PostgrestError
+			await ctx.answerCallbackQuery()
+			return await ctx.reply(
+				ctx.t('prediction_fail', { err: errMessage.message }),
+				{ parse_mode: 'HTML' },
+			)
+		}
 
-		if (game) await buildMatchMessage(ctx, game)
+		await ctx.answerCallbackQuery({
+			text: `${ctx.t('score_saved')} ${game.home} – ${game.away} → ${homeGoals}:${awayGoals}`,
+		})
+		return await showPredictScreen(ctx)
 	}
 
 	if (data.startsWith('leaderboard'))
@@ -272,7 +367,7 @@ bot.on('callback_query:data', async (ctx) => {
 	}
 
 	if (data === 'menu') {
-		ctx.session = { game: undefined, leaderboard: { page: 1, total_pages: 1 } }
+		ctx.session = { leaderboard: { page: 1, total_pages: 1 } }
 		ctx.answerCallbackQuery()
 		ctx.editMessageText(ctx.t('start'), {
 			reply_markup: await buildMainMenu(ctx, games),
@@ -432,79 +527,11 @@ bot.on('callback_query:data', async (ctx) => {
 	}
 
 	if (data.startsWith('edit_')) {
-		if (!games.length || !hasUpcomingRound(games)) {
-			await ctx.answerCallbackQuery()
-			return ctx.editMessageText(ctx.t('no_upcoming_games'), {
-				reply_markup: buildMenuButton(ctx),
-			})
-		}
-		if (await ensurePredictionsOpen(ctx, games)) return
-		const game = games.find((game: Game) => game.game_id === parseGameId(data))
-
-		ctx.session.game = game
-
-		await ctx.answerCallbackQuery()
-		if (game) await buildMatchMessage(ctx, game)
+		return await openScorePicker(ctx, games, parseGameId(data))
 	}
 })
 
 bot.on('message:text', async (ctx) => {
-	const msg = ctx.message.text.trim()
-
-	if (ctx.session.game) {
-		const score = parseScore(msg)
-		const [homeGoals, awayGoals] = score.split('-')
-		const { home, away, round, game_id, season } = ctx.session.game
-		try {
-			return await saveUserPrediction(
-				game_id,
-				ctx,
-				home,
-				away,
-				score,
-				round,
-				season,
-			).then(async () => {
-				await ctx.reply(
-					ctx.t('prediction_made', {
-						n: '\n\n',
-						home,
-						away,
-						homeGoals,
-						awayGoals,
-					}),
-					{ parse_mode: 'MarkdownV2' },
-				)
-				const predicted = await getPredictionsByUser(
-					ctx.from.id,
-					round,
-					season,
-				).then((data) => data.map((p) => p.game_id))
-				const games = await getGamesForDisplay()
-				const title =
-					predicted.length < games.length
-						? ctx.t('match_select')
-						: ctx.t('all_predictions_made')
-
-				await ctx.reply(title, {
-					reply_markup: buildRoundMenu(ctx, games, predicted),
-				})
-				ctx.session.game = undefined
-			})
-		} catch (err) {
-			console.error(err)
-			const errMessage = err as PostgrestError
-			return await ctx.reply(
-				ctx.t('prediction_fail', {
-					err: errMessage.message,
-				}),
-				{
-					parse_mode: 'HTML',
-				},
-			)
-		}
-	}
-
 	await ctx.reply(ctx.t('fallback'))
 })
 
@@ -523,7 +550,6 @@ if (import.meta.main) {
 }
 
 export type SessionData = {
-	game: Game | undefined
 	leaderboard: {
 		page: number
 		total_pages: number

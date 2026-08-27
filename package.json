@@ -1,6 +1,6 @@
 {
 	"type": "module",
-	"version": "1.6",
+	"version": "1.7.0",
 	"devDependencies": {
 		"@types/node": "^24.10.1",
 		"typescript": "^5.9.3",
