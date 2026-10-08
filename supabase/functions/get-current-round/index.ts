@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import { isValid } from 'npm:date-fns@^4.1.0/isValid'
 import { parse } from 'npm:date-fns@^4.1.0'
 import { ru } from 'npm:date-fns@^4.1.0/locale'
+import { notifyPredictionResults } from '../_shared/notify-prediction-results.ts'
 import { sanitizeTeamName } from '../_shared/telegram-bot/helpers/sanitize-team-name.ts'
 import { Database } from '../_shared/telegram-bot/database.types.ts'
 import { Game, RoundData } from '../_shared/telegram-bot/lib/types.ts'
@@ -275,12 +276,15 @@ Deno.serve(async () => {
 			},
 		)
 	}
+	const notified = await notifyPredictionResults(supabase)
+
 	return new Response(
 		JSON.stringify({
 			inserted: {
 				current: current_round?.data?.length ?? 0,
 				next: next_round?.data?.length ?? 0,
 			},
+			notified,
 		}),
 		{
 			headers,

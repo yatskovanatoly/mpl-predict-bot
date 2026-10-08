@@ -231,6 +231,7 @@ export type Database = {
           home_team: string | null
           id: string
           last_name: string | null
+          notified_at: string | null
           round: number | null
           season: string | null
           status: Database["public"]["Enums"]["status"] | null
@@ -249,6 +250,7 @@ export type Database = {
           home_team?: string | null
           id?: string
           last_name?: string | null
+          notified_at?: string | null
           round?: number | null
           season?: string | null
           status?: Database["public"]["Enums"]["status"] | null
@@ -267,6 +269,7 @@ export type Database = {
           home_team?: string | null
           id?: string
           last_name?: string | null
+          notified_at?: string | null
           round?: number | null
           season?: string | null
           status?: Database["public"]["Enums"]["status"] | null

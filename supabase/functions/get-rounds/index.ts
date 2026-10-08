@@ -1,5 +1,6 @@
 import { DOMParser } from "jsr:@b-fuze/deno-dom@0.1.56";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { notifyPredictionResults } from "../_shared/notify-prediction-results.ts";
 import { sanitizeTeamName } from "../_shared/telegram-bot/helpers/sanitize-team-name.ts";
 
 const MPL_ID = '202'
@@ -208,9 +209,12 @@ Deno.serve(async () => {
 			}
 		)
 	}
+	const notified = await notifyPredictionResults(supabase)
+
 	return new Response(
 		JSON.stringify({
 			inserted: data?.length ?? 0,
+			notified,
 		}),
 		{
 			headers,
