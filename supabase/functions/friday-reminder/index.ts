@@ -8,6 +8,9 @@ import {
 } from '../_shared/matchday.ts'
 
 const MESSAGE = 'а тур уже завтра...'
+const REPLY_MARKUP = {
+	inline_keyboard: [[{ text: '⚽ сделать прогноз', callback_data: 'predict' }]],
+}
 
 async function refreshRoundData(
 	supabaseUrl: string,
@@ -32,7 +35,11 @@ async function sendTelegramMessage(
 		{
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ chat_id: chatId, text }),
+			body: JSON.stringify({
+				chat_id: chatId,
+				text,
+				reply_markup: REPLY_MARKUP,
+			}),
 		},
 	)
 	if (!res.ok) {
