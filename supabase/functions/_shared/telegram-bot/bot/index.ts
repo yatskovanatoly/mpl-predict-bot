@@ -103,6 +103,17 @@ const findOpenRound = (
 	)
 }
 
+const findLatestScoredRound = (
+	games: Array<{
+		round: number
+		home_goals: number | null
+		away_goals: number | null
+	}>,
+) => games
+	.filter((game) => game.home_goals !== null && game.away_goals !== null)
+	.map((game) => game.round)
+	.sort((a, b) => b - a)[0]
+
 const parseGameDate = (time?: string | null, season?: string | null) => {
 	if (!time) return undefined
 	const normalized = time.trim().replace(/\s+/g, ' ')
@@ -303,7 +314,7 @@ const getResultRounds = async (selectedSeason?: string) => {
 	if (error) throw error
 	const games = data ?? []
 	const rounds = [...new Set(games.map((game) => game.round))].sort((left, right) => right - left)
-	const currentRound = findOpenRound(games) ?? rounds[0]
+	const currentRound = findLatestScoredRound(games) ?? findOpenRound(games) ?? rounds[0]
 	return { season: season ?? games[0]?.season ?? '', games, rounds, currentRound }
 }
 
@@ -311,7 +322,11 @@ const buildResultRoundKeyboard = (rounds: number[], currentRound?: number) => {
 	const keyboard = new InlineKeyboard()
 	const orderedRounds = currentRound === undefined
 		? rounds
-		: [currentRound, ...rounds.filter((round) => round !== currentRound)]
+		: [
+			currentRound,
+			...rounds.filter((round) => round > currentRound).sort((a, b) => a - b),
+			...rounds.filter((round) => round < currentRound).sort((a, b) => b - a),
+		]
 	orderedRounds.forEach((round) => {
 		keyboard.text(round === currentRound ? `Тур ${round} (текущий)` : `Тур ${round}`, `admin_result_round_${round}`).row()
 	})
@@ -448,7 +463,9 @@ const showPredictScreen = async (ctx: MyContext) => {
 	const groupedPredictions = groupPredictionsByStatus(usersPredictions)
 	const predictionsList = formatUserPredictions(groupedPredictions, ctx)
 
-	const header = hasPredictions ? ctx.t('predicted', { n: roundNumber }) : `Тур ${roundNumber}`
+	const header = hasPredictions
+		? ctx.t('predicted', { n: roundNumber })
+		: `Предстоящий тур — ${roundNumber}`
 	const body = predictionsList
 	const footer = isPastMatchDay
 		? ctx.t('prediction_closed')
