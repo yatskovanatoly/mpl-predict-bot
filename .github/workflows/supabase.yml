@@ -20,7 +20,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: latest
 
@@ -51,6 +51,6 @@ jobs:
           functions="${{ steps.changes.outputs.functions }}"
           while IFS= read -r fn; do
             echo "Deploying $fn"
-            supabase functions deploy "$fn" --no-verify-jwt
+            supabase functions deploy "$fn" --no-verify-jwt --yes
           done <<< "$functions"
 
