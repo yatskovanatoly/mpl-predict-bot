@@ -5,6 +5,7 @@ import { buildMenuButton } from './build-menus.ts'
 
 const ensurePredictionsOpen = async (ctx: MyContext, games: Game[]) => {
 	const matchDate = new Date(games[0].date)
+	if (!Number.isFinite(matchDate.getTime())) return null
 	const now = addHours(new Date(), 3)
 	const isPastMatchDay = matchDate <= now
 

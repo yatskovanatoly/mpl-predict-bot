@@ -19,7 +19,8 @@ export const buildMainMenu = async (ctx: MyContext, games: Game[]) => {
 		return kb
 	}
 
-	const isPastMatchDay = new Date(games[0].date) <= addHours(new Date(), 3)
+	const matchDate = games.find((game) => Number.isFinite(game.date.getTime()))?.date
+	const isPastMatchDay = !!matchDate && matchDate <= addHours(new Date(), 3)
 	const prevRound = games[0].round - 1
 	const currentRoundPredictions =
 		(await getPredictionsByUser(
@@ -66,8 +67,8 @@ export const buildRoundMenu = (
 ) => {
 	const kb = new InlineKeyboard()
 
-	games.forEach(({ game_id, home, away }) => {
-		if (!userPredictions.includes(game_id)) {
+	games.forEach(({ game_id, home, away, score, suspended }) => {
+		if (!userPredictions.includes(game_id) && !score && !suspended) {
 			kb.text(
 				`${displayTeamName(home)} — ${displayTeamName(away)}`,
 				`game_${game_id}`

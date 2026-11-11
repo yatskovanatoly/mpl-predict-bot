@@ -1,7 +1,6 @@
 import { createClient, PostgrestError } from 'jsr:@supabase/supabase-js@^2.56.0';
 import { I18n, type I18nFlavor } from 'npm:@grammyjs/i18n@1.1.2';
 import { supabaseAdapter } from 'npm:@grammyjs/storage-supabase@2.5.0';
-import { addDays } from 'npm:date-fns@4.1.0/addDays';
 import { addHours } from 'npm:date-fns@4.1.0/addHours';
 import { differenceInDays } from 'npm:date-fns@4.1.0/differenceInDays';
 import {
@@ -29,8 +28,6 @@ import { displayTeamName } from '../helpers/display-team-name.ts';
 import { handleLeaderboard } from '../helpers/handle-leaderboard.ts';
 import { parseGameId } from '../helpers/parse-game-id.ts';
 import {
-  getCurrentRound,
-  getNextRound,
   getPredictionsByRound,
   getPredictionsByUser,
   getUserRoundsWithPredictions,
@@ -76,39 +73,142 @@ const adminSupabase = supabaseServiceRoleKey
 	? createClient(supabaseUrl, supabaseServiceRoleKey)
 	: null
 
-const getGamesForDisplay = async (): Promise<Game[]> => {
-	const currentGames = await getCurrentRound()
-	const nextGames = await getNextRound()
-
-	if (!currentGames.length) return nextGames
-	if (!nextGames.length) return currentGames
-	const { data: suspendedGames, error: suspendedGamesError } = await supabase
+const getLatestGamesSeason = async (database: typeof supabase) => {
+	const { data, error } = await database
 		.from('games')
-		.select('game_id,suspended')
-		.in('game_id', currentGames.map((game) => game.game_id))
-		.eq('suspended', true)
-	if (suspendedGamesError) throw suspendedGamesError
-	const suspendedGameIds = new Set((suspendedGames ?? []).map((game) => game.game_id))
+		.select('season')
+		.not('season', 'is', null)
+		.order('game_id', { ascending: false })
+		.limit(1)
+		.maybeSingle()
+	if (error) throw error
+	return data?.season ?? undefined
+}
 
-	const currentLastDateRaw = currentGames.at(-1)?.date
-	const currentLastDate = currentLastDateRaw
-		? new Date(currentLastDateRaw)
-		: undefined
-	const currentIsActive =
-		currentGames.some((game) => !game.score && !suspendedGameIds.has(game.game_id)) &&
-		!!currentLastDate &&
-		!Number.isNaN(currentLastDate.getTime()) &&
-		addDays(currentLastDate, 1) >= new Date()
+const findOpenRound = (
+	games: Array<{
+		round: number
+		home_goals: number | null
+		away_goals: number | null
+		suspended?: boolean
+	}>,
+) => {
+	const rounds = [...new Set(games.map((game) => game.round))].sort((a, b) => a - b)
+	return rounds.find((round) =>
+		games.some((game) =>
+			game.round === round &&
+			(game.home_goals === null || game.away_goals === null) &&
+			!game.suspended,
+		),
+	)
+}
 
-	return currentIsActive ? currentGames : nextGames
+const parseGameDate = (time?: string | null, season?: string | null) => {
+	if (!time) return undefined
+	const normalized = time.trim().replace(/\s+/g, ' ')
+	if (/^\d{1,2}:\d{2}$/.test(normalized)) return undefined
+	const parsed = new Date(normalized)
+	if (Number.isFinite(parsed.getTime())) return parsed
+
+	const seasonPeriods = [...(season ?? '').matchAll(/(\d{1,2})-(\d{4})/g)]
+	const yearForMonth = (month: number) => {
+		const start = seasonPeriods[0]
+		const end = seasonPeriods[1]
+		if (!start?.[1] || !start[2]) return new Date().getFullYear()
+		const startMonth = Number(start[1])
+		const startYear = Number(start[2])
+		if (!end?.[1] || !end[2]) return startYear
+		const endYear = Number(end[2])
+		return month >= startMonth ? startYear : endYear
+	}
+	const buildDate = (day: number, month: number, year: number, hours = 0, minutes = 0) => {
+		const date = new Date(year, month - 1, day, hours, minutes)
+		return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+			? date
+			: undefined
+	}
+	const timeMatch = normalized.match(/(?:^|\s)(\d{1,2}):(\d{2})(?:\s|$)/)
+	const hours = Number(timeMatch?.[1] ?? 0)
+	const minutes = Number(timeMatch?.[2] ?? 0)
+	const numericDate = normalized.match(/^(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?\b/)
+	if (numericDate?.[1] && numericDate[2]) {
+		const day = Number(numericDate[1])
+		const month = Number(numericDate[2])
+		const explicitYear = numericDate[3] ? Number(numericDate[3]) : undefined
+		const year = explicitYear
+			? explicitYear < 100 ? 2000 + explicitYear : explicitYear
+			: yearForMonth(month)
+		return buildDate(day, month, year, hours, minutes)
+	}
+
+	const monthPrefixes: Record<string, number> = {
+		янв: 1, фев: 2, мар: 3, апр: 4, май: 5, мая: 5, июн: 6,
+		июл: 7, авг: 8, сен: 9, сент: 9, окт: 10, ноя: 11, дек: 12,
+	}
+	const russianDate = normalized.toLowerCase().match(/^(\d{1,2})\s+([а-яё]+)\.?\s*(\d{4})?/)
+	if (russianDate?.[1] && russianDate[2]) {
+		const day = Number(russianDate[1])
+		const monthName = russianDate[2].slice(0, 4)
+		const month = monthPrefixes[monthName] ?? monthPrefixes[monthName.slice(0, 3)]
+		if (month) {
+			const year = Number(russianDate[3] ?? yearForMonth(month))
+			return buildDate(day, month, year, hours, minutes)
+		}
+	}
+	return undefined
+}
+
+const getGamesForDisplay = async (): Promise<Game[]> => {
+	const database = adminSupabase ?? supabase
+	const season = await getLatestGamesSeason(database)
+	if (!season) return []
+
+	const { data, error } = await database
+		.from('games')
+		.select('*')
+		.eq('season', season)
+		.order('round', { ascending: true })
+		.order('time', { ascending: true })
+	if (error) throw error
+	const games = data ?? []
+	const currentRound = findOpenRound(games)
+	if (currentRound === undefined) return []
+
+	return games
+		.filter((game) => game.round === currentRound)
+		.map((game) => ({
+			game_id: game.game_id,
+			home_id: game.home_id,
+			away_id: game.away_id,
+			home_logo: game.home_logo ?? undefined,
+			away_logo: game.away_logo ?? undefined,
+			home: game.home_name,
+			away: game.away_name,
+			score: game.home_goals !== null && game.away_goals !== null
+				? `${game.home_goals}:${game.away_goals}`
+				: '',
+			time: game.time ?? undefined,
+			// The current games.time values contain only the kickoff clock time.
+			date: parseGameDate(game.time, game.season) ?? new Date(Number.NaN),
+			round: game.round,
+			season: game.season ?? season,
+			suspended: game.suspended,
+		}))
 }
 
 const hasUpcomingRound = (games: Game[]) => {
 	if (!games.length) return false
-	const matchDate = new Date(games[0].date)
-	if (Number.isNaN(matchDate.getTime())) return false
+	const hasOpenGame = games.some((game) => !game.score && !game.suspended)
+	if (!hasOpenGame) return false
+	const matchDate = games.find((game) => Number.isFinite(game.date.getTime()))?.date
+	if (!matchDate) return true
 	const daysDiff = differenceInDays(matchDate, addHours(new Date(), 3))
 	return daysDiff >= -1 && daysDiff <= 30
+}
+
+const hasMatchDayPassed = (games: Game[]) => {
+	const matchDate = games.find((game) => Number.isFinite(game.date.getTime()))?.date
+	return !!matchDate && matchDate <= addHours(new Date(), 3)
 }
 
 const formatOutcomePercentages = (
@@ -191,26 +291,19 @@ const isResultAdmin = async (telegramId: number) => {
 
 const getResultRounds = async (selectedSeason?: string) => {
 	const database = adminSupabase ?? supabase
-	const currentGames = await getCurrentRound()
-	const displayedGames = await getGamesForDisplay()
-	let season = selectedSeason ?? displayedGames[0]?.season ?? currentGames[0]?.season ?? undefined
-	if (!season && adminSupabase) {
-		const { data } = await adminSupabase
-			.from('seasons')
-			.select('code')
-			.order('created_at', { ascending: false })
-			.limit(1)
-			.maybeSingle()
-		season = data?.code
-	}
+	const season = selectedSeason ?? await getLatestGamesSeason(database)
+	if (!season) return { season: '', games: [], rounds: [], currentRound: undefined }
 
-	let query = database.from('games').select('*').order('round', { ascending: false })
-	if (season) query = query.eq('season', season)
+	const query = database
+		.from('games')
+		.select('*')
+		.eq('season', season)
+		.order('round', { ascending: false })
 	const { data, error } = await query
 	if (error) throw error
 	const games = data ?? []
 	const rounds = [...new Set(games.map((game) => game.round))].sort((left, right) => right - left)
-	const currentRound = displayedGames[0]?.round ?? currentGames[0]?.round ?? rounds[0]
+	const currentRound = findOpenRound(games) ?? rounds[0]
 	return { season: season ?? games[0]?.season ?? '', games, rounds, currentRound }
 }
 
@@ -320,9 +413,7 @@ const showPredictScreen = async (ctx: MyContext) => {
 		})
 	}
 
-	const matchDate = new Date(games[0].date)
-	const now = addHours(new Date(), 3)
-	const isPastMatchDay = matchDate <= now
+	const isPastMatchDay = hasMatchDayPassed(games)
 
 	const usersPredictions = await getPredictionsByUser(
 		ctx.from!.id,
@@ -357,7 +448,7 @@ const showPredictScreen = async (ctx: MyContext) => {
 	const groupedPredictions = groupPredictionsByStatus(usersPredictions)
 	const predictionsList = formatUserPredictions(groupedPredictions, ctx)
 
-	const header = hasPredictions ? ctx.t('predicted', { n: roundNumber }) : ''
+	const header = hasPredictions ? ctx.t('predicted', { n: roundNumber }) : `Тур ${roundNumber}`
 	const body = predictionsList
 	const footer = isPastMatchDay
 		? ctx.t('prediction_closed')
@@ -425,6 +516,12 @@ const openScorePicker = async (
 	if (!game) {
 		await ctx.answerCallbackQuery()
 		return ctx.editMessageText(ctx.t('fallback'), {
+			reply_markup: buildMenuButton(ctx),
+		})
+	}
+	if (game.score || game.suspended) {
+		await ctx.answerCallbackQuery()
+		return ctx.editMessageText(ctx.t('prediction_closed'), {
 			reply_markup: buildMenuButton(ctx),
 		})
 	}
@@ -624,7 +721,7 @@ bot.on('callback_query:data', async (ctx) => {
 		const awayGoals = clampGoals(Number(awayRaw))
 		const game = games.find((game: Game) => game.game_id === gameId)
 
-		if (!game || !hasUpcomingRound(games)) {
+		if (!game || game.score || game.suspended || !hasUpcomingRound(games)) {
 			await ctx.answerCallbackQuery()
 			return ctx.editMessageText(ctx.t('no_upcoming_games'), {
 				reply_markup: buildMenuButton(ctx),

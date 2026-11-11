@@ -19,6 +19,7 @@ export type Game = {
 	round: number
 	date: Date
 	season: string
+	suspended?: boolean
 }
 
 export type Rounds = {
