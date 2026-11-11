@@ -191,10 +191,30 @@ Deno.serve(async () => {
 				season: game.season && game.season !== '' ? game.season : fallbackSeason,
 		  }))
 		: games
+	const suspendedByGameId = new Map<number, boolean>()
+	if (gamesWithSeason.length) {
+		const { data: existingGames, error: existingGamesError } = await supabase
+			.from('games')
+			.select('game_id,suspended')
+			.in('game_id', gamesWithSeason.map((game) => game.game_id))
+		if (existingGamesError) {
+			return new Response(
+				JSON.stringify({ error: existingGamesError.message }),
+				{ status: 500, headers },
+			)
+		}
+		for (const game of existingGames ?? []) {
+			suspendedByGameId.set(game.game_id, game.suspended)
+		}
+	}
+	const gamesWithSuspension = gamesWithSeason.map((game) => ({
+		...game,
+		suspended: suspendedByGameId.get(game.game_id) ?? false,
+	}))
 
 	const { data, error } = await supabase
 		.from('games')
-		.upsert(gamesWithSeason, {
+		.upsert(gamesWithSuspension, {
 			onConflict: 'game_id',
 		})
 		.select()

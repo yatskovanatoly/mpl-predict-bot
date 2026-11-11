@@ -8,6 +8,7 @@ import {
   Bot,
   Context,
   GrammyError,
+  InlineKeyboard,
   session,
   SessionFlavor,
 } from 'npm:grammy@^1.38.3';
@@ -59,6 +60,7 @@ const token = isDev
 	: Deno.env.get('TELEGRAM_BOT_TOKEN') ?? Deno.env.get('TELEGRAM_BOT_TOKEN_DEV')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
 const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
+const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
 if (!token) {
 	throw new Error(
@@ -70,6 +72,9 @@ if (!supabaseKey) throw new Error('db key is missing')
 
 export const bot = new Bot<MyContext>(token)
 export const supabase = createClient(supabaseUrl, supabaseKey)
+const adminSupabase = supabaseServiceRoleKey
+	? createClient(supabaseUrl, supabaseServiceRoleKey)
+	: null
 
 const getGamesForDisplay = async (): Promise<Game[]> => {
 	const currentGames = await getCurrentRound()
@@ -77,13 +82,20 @@ const getGamesForDisplay = async (): Promise<Game[]> => {
 
 	if (!currentGames.length) return nextGames
 	if (!nextGames.length) return currentGames
+	const { data: suspendedGames, error: suspendedGamesError } = await supabase
+		.from('games')
+		.select('game_id,suspended')
+		.in('game_id', currentGames.map((game) => game.game_id))
+		.eq('suspended', true)
+	if (suspendedGamesError) throw suspendedGamesError
+	const suspendedGameIds = new Set((suspendedGames ?? []).map((game) => game.game_id))
 
 	const currentLastDateRaw = currentGames.at(-1)?.date
 	const currentLastDate = currentLastDateRaw
 		? new Date(currentLastDateRaw)
 		: undefined
 	const currentIsActive =
-		currentGames.some((game) => !game.score) &&
+		currentGames.some((game) => !game.score && !suspendedGameIds.has(game.game_id)) &&
 		!!currentLastDate &&
 		!Number.isNaN(currentLastDate.getTime()) &&
 		addDays(currentLastDate, 1) >= new Date()
@@ -168,6 +180,117 @@ bot.command('changelog', async (ctx) => {
 		}
 	}
 })
+
+const isResultAdmin = async (telegramId: number) => {
+	const { data, error } = await supabase.rpc('is_telegram_admin', {
+		p_telegram_id: telegramId,
+	})
+	const configuredIds = Deno.env.get('TG_ADMIN_ID') ?? ''
+	return (!error && data === true) || configuredIds.split(',').some((id) => Number(id.trim()) === telegramId)
+}
+
+const getResultRounds = async () => {
+	const database = adminSupabase ?? supabase
+	const currentGames = await getCurrentRound()
+	const displayedGames = await getGamesForDisplay()
+	let season = displayedGames[0]?.season ?? currentGames[0]?.season ?? undefined
+	if (!season && adminSupabase) {
+		const { data } = await adminSupabase
+			.from('seasons')
+			.select('code')
+			.order('created_at', { ascending: false })
+			.limit(1)
+			.maybeSingle()
+		season = data?.code
+	}
+
+	let query = database.from('games').select('*').order('round', { ascending: false })
+	if (season) query = query.eq('season', season)
+	const { data, error } = await query
+	if (error) throw error
+	const games = data ?? []
+	const rounds = [...new Set(games.map((game) => game.round))].sort((left, right) => right - left)
+	const currentRound = displayedGames[0]?.round ?? currentGames[0]?.round ?? rounds[0]
+	return { season: season ?? games[0]?.season ?? '', games, rounds, currentRound }
+}
+
+const buildResultRoundKeyboard = (rounds: number[], currentRound?: number) => {
+	const keyboard = new InlineKeyboard()
+	const orderedRounds = currentRound === undefined
+		? rounds
+		: [currentRound, ...rounds.filter((round) => round !== currentRound)]
+	orderedRounds.forEach((round) => {
+		keyboard.text(round === currentRound ? `Тур ${round} (текущий)` : `Тур ${round}`, `admin_result_round_${round}`).row()
+	})
+	return keyboard
+}
+
+const buildResultMatchKeyboard = (games: any[], includeRoundPicker = true) => {
+	const keyboard = new InlineKeyboard()
+	games.forEach((game) => {
+		const score = game.home_goals !== null && game.away_goals !== null
+			? ` (${game.home_goals}:${game.away_goals})`
+			: ''
+		const suspended = game.suspended ? ' ⏸' : ''
+		keyboard.text(`${game.home_name} — ${game.away_name}${score}${suspended}`, `admin_result_${game.game_id}`).row()
+	})
+	if (includeRoundPicker) keyboard.text('Выбрать другой тур', 'admin_choose_result_round').row()
+	return keyboard
+}
+
+const handleResultCommand = async (ctx: MyContext) => {
+	if (!ctx.from || !(await isResultAdmin(ctx.from.id))) {
+		await ctx.reply('команда доступна только администраторам')
+		return
+	}
+
+	const { season, games, currentRound } = await getResultRounds()
+	if (!games.length || currentRound === undefined) {
+		await ctx.reply('сейчас нет матчей для выбора')
+		return
+	}
+	ctx.session.resultSeason = season
+	const currentGames = games.filter((game) => game.round === currentRound)
+	await ctx.reply(`Текущий тур — ${currentRound}. Выбери матч или другой тур:`, {
+		reply_markup: buildResultMatchKeyboard(currentGames),
+	})
+}
+
+bot.command(['result', 'setresult'], handleResultCommand)
+
+const buildResultGameKeyboard = (game: {
+	game_id: number
+	home_goals: number | null
+	away_goals: number | null
+	suspended: boolean
+}) => {
+	const keyboard = new InlineKeyboard()
+	const hasResult = game.home_goals !== null && game.away_goals !== null
+	if (hasResult) {
+		keyboard.text('Сбросить результат', `admin_reset_result_${game.game_id}`).row()
+	}
+	if (!hasResult || game.suspended) {
+		keyboard
+			.text(game.suspended ? 'Снять отметку «перенесён»' : 'Отметить как перенесённый', `admin_toggle_suspended_${game.game_id}`)
+			.row()
+	}
+	keyboard.text('К турам', 'admin_choose_result_round')
+	return keyboard
+}
+
+const formatResultGamePrompt = (game: {
+	home_name: string
+	away_name: string
+	home_goals: number | null
+	away_goals: number | null
+	suspended: boolean
+}) => {
+	const score = game.home_goals !== null && game.away_goals !== null
+		? `\nтекущий счёт: ${game.home_goals}:${game.away_goals}`
+		: ''
+	const suspended = game.suspended ? '\nматч отмечен как перенесённый' : ''
+	return `матч: ${game.home_name} — ${game.away_name}${score}${suspended}\nотправь счёт, например 2-1. необязательно добавь заметку после |\nпример: 2-1 | Иванов забил, Петров получил жёлтую карточку`
+}
 
 const showPredictScreen = async (ctx: MyContext) => {
 	const games = await getGamesForDisplay()
@@ -306,6 +429,107 @@ bot.callbackQuery('predict', async (ctx) => {
 
 bot.on('callback_query:data', async (ctx) => {
 	const data = ctx.callbackQuery.data
+	if (data.startsWith('admin_reset_result_') || data.startsWith('admin_toggle_suspended_')) {
+		if (!ctx.from || !(await isResultAdmin(ctx.from.id))) {
+			await ctx.answerCallbackQuery({ text: 'нет доступа', show_alert: true })
+			return
+		}
+		if (!adminSupabase) {
+			await ctx.answerCallbackQuery({ text: 'не настроен доступ для изменения результата', show_alert: true })
+			return
+		}
+		const isReset = data.startsWith('admin_reset_result_')
+		const prefix = isReset ? 'admin_reset_result_' : 'admin_toggle_suspended_'
+		const gameId = Number(data.slice(prefix.length))
+		const { data: game, error: gameError } = await adminSupabase
+			.from('games')
+			.select('*')
+			.eq('game_id', gameId)
+			.maybeSingle()
+		if (gameError || !game) {
+			await ctx.answerCallbackQuery({ text: 'матч не найден', show_alert: true })
+			return
+		}
+
+		if (isReset) {
+			const { error } = await adminSupabase.rpc('reset_game_result', {
+				p_game_id: gameId,
+				p_updated_by: ctx.from.id,
+			})
+			if (error) {
+				console.error('result reset failed', error)
+				await ctx.answerCallbackQuery({ text: 'не удалось сбросить результат', show_alert: true })
+				return
+			}
+		} else {
+			const { error } = await adminSupabase
+				.from('games')
+				.update({ suspended: !game.suspended })
+				.eq('game_id', gameId)
+			if (error) {
+				console.error('suspended state update failed', error)
+				await ctx.answerCallbackQuery({ text: 'не удалось изменить статус матча', show_alert: true })
+				return
+			}
+		}
+
+		const { data: updatedGame, error: updatedGameError } = await adminSupabase
+			.from('games')
+			.select('*')
+			.eq('game_id', gameId)
+			.maybeSingle()
+		if (updatedGameError || !updatedGame) {
+			await ctx.answerCallbackQuery()
+			return
+		}
+		ctx.session.pendingResultGameId = gameId
+		await ctx.answerCallbackQuery({
+			text: isReset ? 'результат сброшен' : updatedGame.suspended ? 'матч отмечен как перенесённый' : 'отметка снята',
+		})
+		await ctx.editMessageText(formatResultGamePrompt(updatedGame), {
+			reply_markup: buildResultGameKeyboard(updatedGame),
+		})
+		return
+	}
+	if (data === 'admin_choose_result_round' || data.startsWith('admin_result_round_')) {
+		if (!ctx.from || !(await isResultAdmin(ctx.from.id))) {
+			await ctx.answerCallbackQuery({ text: 'нет доступа', show_alert: true })
+			return
+		}
+		const { season, games, rounds, currentRound } = await getResultRounds()
+		ctx.session.resultSeason = season
+		if (data === 'admin_choose_result_round') {
+			await ctx.answerCallbackQuery()
+			await ctx.editMessageText('выбери тур:', { reply_markup: buildResultRoundKeyboard(rounds, currentRound) })
+			return
+		}
+		const round = Number(data.slice('admin_result_round_'.length))
+		const roundGames = games.filter((game) => game.round === round)
+		await ctx.answerCallbackQuery()
+		await ctx.editMessageText(`Тур ${round}: выбери матч:`, {
+			reply_markup: buildResultMatchKeyboard(roundGames, false).text('К турам', 'admin_choose_result_round'),
+		})
+		return
+	}
+	if (data.startsWith('admin_result_')) {
+		if (!ctx.from || !(await isResultAdmin(ctx.from.id))) {
+			await ctx.answerCallbackQuery({ text: 'нет доступа', show_alert: true })
+			return
+		}
+		const gameId = Number(data.slice('admin_result_'.length))
+		const database = adminSupabase ?? supabase
+		const { data: game, error } = await database.from('games').select('*').eq('game_id', gameId).maybeSingle()
+		if (error || !game) {
+			await ctx.answerCallbackQuery({ text: 'матч не найден', show_alert: true })
+			return
+		}
+		ctx.session.pendingResultGameId = gameId
+		await ctx.answerCallbackQuery()
+		await ctx.editMessageText(formatResultGamePrompt(game), {
+			reply_markup: buildResultGameKeyboard(game),
+		})
+		return
+	}
 	const games = await getGamesForDisplay()
 	const currentSeason = games[0]?.season
 
@@ -532,6 +756,60 @@ bot.on('callback_query:data', async (ctx) => {
 })
 
 bot.on('message:text', async (ctx) => {
+	const pendingGameId = ctx.session.pendingResultGameId
+	if (pendingGameId) {
+		if (!ctx.from || !(await isResultAdmin(ctx.from.id))) {
+			delete ctx.session.pendingResultGameId
+			await ctx.reply('команда доступна только администраторам')
+			return
+		}
+		const [scoreText, ...noteParts] = ctx.msg.text.split('|')
+		const score = scoreText?.trim().match(/^(\d+)\s*[-:]\s*(\d+)$/)
+		if (!score) {
+			await ctx.reply('не распознал счёт. отправь его в формате 2-1; заметку можно добавить после |')
+			return
+		}
+		const database = adminSupabase ?? supabase
+		const { data: game, error: gameError } = await database.from('games').select('*').eq('game_id', pendingGameId).maybeSingle()
+		if (gameError || !game) {
+			delete ctx.session.pendingResultGameId
+			await ctx.reply('матч не найден, начни заново командой /setresult')
+			return
+		}
+		const homeGoals = Number(score[1])
+		const awayGoals = Number(score[2])
+		const note = noteParts.join('|').trim() || null
+		if (!adminSupabase) {
+			await ctx.reply('не настроен доступ для сохранения результата')
+			return
+		}
+		const { error } = await adminSupabase.from('match_results').upsert({
+			game_id: game.game_id,
+			season: game.season ?? '',
+			round: game.round,
+			time: game.time,
+			home_id: game.home_id,
+			home_name: game.home_name,
+			home_logo: game.home_logo,
+			away_id: game.away_id,
+			away_name: game.away_name,
+			away_logo: game.away_logo,
+			home_goals: homeGoals,
+			away_goals: awayGoals,
+			note,
+			updated_by: ctx.from.id,
+		}, { onConflict: 'game_id' })
+		if (error) {
+			console.error('result submission failed', error)
+			await ctx.reply('не удалось сохранить результат')
+			return
+		}
+		const { error: gameUpdateError } = await adminSupabase.from('games').update({ home_goals: homeGoals, away_goals: awayGoals, suspended: false }).eq('game_id', pendingGameId)
+		if (gameUpdateError) console.error('failed to sync game score', gameUpdateError)
+		delete ctx.session.pendingResultGameId
+		await ctx.reply(`сохранено: ${game.home_name} ${homeGoals}:${awayGoals} ${game.away_name}${note ? `\n${note}` : ''}`)
+		return
+	}
 	await ctx.reply(ctx.t('fallback'))
 })
 
@@ -550,6 +828,8 @@ if (import.meta.main) {
 }
 
 export type SessionData = {
+	pendingResultGameId?: number
+	resultSeason?: string
 	leaderboard: {
 		page: number
 		total_pages: number

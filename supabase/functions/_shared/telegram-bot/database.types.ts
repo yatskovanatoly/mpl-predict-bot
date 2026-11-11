@@ -79,6 +79,7 @@ export type Database = {
           id: string
           round: number
           season: string | null
+          suspended: boolean
           time: string | null
           updated_at: string | null
         }
@@ -98,6 +99,7 @@ export type Database = {
           id?: string
           round: number
           season?: string | null
+          suspended?: boolean
           time?: string | null
           updated_at?: string | null
         }
@@ -117,6 +119,7 @@ export type Database = {
           id?: string
           round?: number
           season?: string | null
+          suspended?: boolean
           time?: string | null
           updated_at?: string | null
         }
@@ -392,6 +395,10 @@ export type Database = {
       prediction_points: {
         Args: { p_status: Database["public"]["Enums"]["status"] | null }
         Returns: number
+      }
+      reset_game_result: {
+        Args: { p_game_id: number; p_updated_by: number }
+        Returns: undefined
       }
       season_standings_computed: {
         Args: { p_season: string }
