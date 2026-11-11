@@ -463,9 +463,7 @@ const showPredictScreen = async (ctx: MyContext) => {
 	const groupedPredictions = groupPredictionsByStatus(usersPredictions)
 	const predictionsList = formatUserPredictions(groupedPredictions, ctx)
 
-	const header = hasPredictions
-		? ctx.t('predicted', { n: roundNumber })
-		: `Предстоящий тур — ${roundNumber}`
+	const header = hasPredictions ? ctx.t('predicted', { n: roundNumber }) : ''
 	const body = predictionsList
 	const footer = isPastMatchDay
 		? ctx.t('prediction_closed')
