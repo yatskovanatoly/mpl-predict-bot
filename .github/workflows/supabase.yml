@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - supabase/functions/**
+      - supabase/migrations/**
+      - supabase/config.toml
+      - .github/workflows/supabase.yml
   workflow_dispatch:
 
 jobs:
@@ -27,12 +30,36 @@ jobs:
       - name: Link project
         run: supabase link --project-ref $PROJECT_ID
 
-      - name: Detect changed functions
+      - name: Detect changed Supabase resources
         id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
         run: |
-          FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} || true)
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            FUNCTIONS=$(ls supabase/functions | grep -v '^_shared$')
+            echo "functions<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$FUNCTIONS" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "migrations=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          FILES=$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" || true)
+          DEPLOY_MIGRATIONS=false
+
+          if echo "$FILES" | grep -q '^supabase/migrations/'; then
+            DEPLOY_MIGRATIONS=true
+          fi
+
+          if echo "$FILES" | grep -q '^.github/workflows/supabase.yml$'; then
+            DEPLOY_MIGRATIONS=true
+          fi
 
           if echo "$FILES" | grep -q '^supabase/functions/_shared/'; then
+            FUNCTIONS=$(ls supabase/functions | grep -v '^_shared$')
+          elif echo "$FILES" | grep -Eq '^supabase/config.toml$|^\.github/workflows/supabase.yml$'; then
             FUNCTIONS=$(ls supabase/functions | grep -v '^_shared$')
           else
             FUNCTIONS=$(echo "$FILES" \
@@ -44,6 +71,11 @@ jobs:
           echo "functions<<EOF" >> $GITHUB_OUTPUT
           echo "$FUNCTIONS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          echo "migrations=$DEPLOY_MIGRATIONS" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy database migrations
+        if: steps.changes.outputs.migrations == 'true'
+        run: supabase db push --remote --yes
 
       - name: Deploy changed functions
         if: steps.changes.outputs.functions != ''
