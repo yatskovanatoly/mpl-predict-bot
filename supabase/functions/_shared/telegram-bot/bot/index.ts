@@ -189,11 +189,11 @@ const isResultAdmin = async (telegramId: number) => {
 	return (!error && data === true) || configuredIds.split(',').some((id) => Number(id.trim()) === telegramId)
 }
 
-const getResultRounds = async () => {
+const getResultRounds = async (selectedSeason?: string) => {
 	const database = adminSupabase ?? supabase
 	const currentGames = await getCurrentRound()
 	const displayedGames = await getGamesForDisplay()
-	let season = displayedGames[0]?.season ?? currentGames[0]?.season ?? undefined
+	let season = selectedSeason ?? displayedGames[0]?.season ?? currentGames[0]?.season ?? undefined
 	if (!season && adminSupabase) {
 		const { data } = await adminSupabase
 			.from('seasons')
@@ -234,8 +234,28 @@ const buildResultMatchKeyboard = (games: any[], includeRoundPicker = true) => {
 		const suspended = game.suspended ? ' ⏸' : ''
 		keyboard.text(`${game.home_name} — ${game.away_name}${score}${suspended}`, `admin_result_${game.game_id}`).row()
 	})
+	const hasResults = games.some((game) => game.home_goals !== null && game.away_goals !== null)
+	if (hasResults && games.length) {
+		keyboard.text('Сбросить все результаты тура', `admin_reset_round_${games[0].round}`).row()
+	}
 	if (includeRoundPicker) keyboard.text('Выбрать другой тур', 'admin_choose_result_round').row()
 	return keyboard
+}
+
+const buildResetRoundConfirmationKeyboard = (round: number) =>
+	new InlineKeyboard()
+		.text('Подтвердить сброс', `admin_confirm_reset_round_${round}`)
+		.row()
+		.text('Отмена', `admin_cancel_reset_round_${round}`)
+
+const showResultRound = async (ctx: MyContext, round: number, message: string) => {
+	const { season, games } = await getResultRounds(ctx.session.resultSeason)
+	ctx.session.resultSeason = season
+	const roundGames = games.filter((game) => game.round === round)
+	await ctx.editMessageText(message, {
+		reply_markup: buildResultMatchKeyboard(roundGames, false)
+			.text('К турам', 'admin_choose_result_round'),
+	})
 }
 
 const handleResultCommand = async (ctx: MyContext) => {
@@ -429,6 +449,65 @@ bot.callbackQuery('predict', async (ctx) => {
 
 bot.on('callback_query:data', async (ctx) => {
 	const data = ctx.callbackQuery.data
+	if (
+		data.startsWith('admin_reset_round_') ||
+		data.startsWith('admin_confirm_reset_round_') ||
+		data.startsWith('admin_cancel_reset_round_')
+	) {
+		if (!ctx.from || !(await isResultAdmin(ctx.from.id))) {
+			await ctx.answerCallbackQuery({ text: 'нет доступа', show_alert: true })
+			return
+		}
+
+		const isConfirm = data.startsWith('admin_confirm_reset_round_')
+		const isCancel = data.startsWith('admin_cancel_reset_round_')
+		const prefix = isConfirm
+			? 'admin_confirm_reset_round_'
+			: isCancel
+				? 'admin_cancel_reset_round_'
+				: 'admin_reset_round_'
+		const round = Number(data.slice(prefix.length))
+		if (!Number.isInteger(round) || round < 1) {
+			await ctx.answerCallbackQuery({ text: 'тур не найден', show_alert: true })
+			return
+		}
+
+		if (isCancel) {
+			await ctx.answerCallbackQuery({ text: 'сброс отменён' })
+			await showResultRound(ctx, round, `Тур ${round}: выбери матч:`)
+			return
+		}
+
+		if (!isConfirm) {
+			await ctx.answerCallbackQuery()
+			await ctx.editMessageText(
+				`Сбросить все результаты тура ${round}? Счёт матчей и начисленные очки за этот тур будут сброшены.`,
+				{ reply_markup: buildResetRoundConfirmationKeyboard(round) },
+			)
+			return
+		}
+
+		if (!adminSupabase) {
+			await ctx.answerCallbackQuery({ text: 'не настроен доступ для изменения результата', show_alert: true })
+			return
+		}
+		const { season } = await getResultRounds(ctx.session.resultSeason)
+		ctx.session.resultSeason = season
+		const { error } = await adminSupabase.rpc('reset_round_results', {
+			p_season: season,
+			p_round: round,
+			p_updated_by: ctx.from.id,
+		})
+		if (error) {
+			console.error('round result reset failed', error)
+			await ctx.answerCallbackQuery({ text: 'не удалось сбросить результаты тура', show_alert: true })
+			return
+		}
+
+		await ctx.answerCallbackQuery({ text: `результаты тура ${round} сброшены` })
+		await showResultRound(ctx, round, `Результаты тура ${round} сброшены. Выбери матч:`)
+		return
+	}
 	if (data.startsWith('admin_reset_result_') || data.startsWith('admin_toggle_suspended_')) {
 		if (!ctx.from || !(await isResultAdmin(ctx.from.id))) {
 			await ctx.answerCallbackQuery({ text: 'нет доступа', show_alert: true })

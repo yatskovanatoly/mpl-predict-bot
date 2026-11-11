@@ -400,6 +400,10 @@ export type Database = {
         Args: { p_game_id: number; p_updated_by: number }
         Returns: undefined
       }
+      reset_round_results: {
+        Args: { p_round: number; p_season: string; p_updated_by: number }
+        Returns: number
+      }
       season_standings_computed: {
         Args: { p_season: string }
         Returns: {
